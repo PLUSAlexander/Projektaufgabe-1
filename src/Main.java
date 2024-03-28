@@ -37,7 +37,7 @@ public class Main {
             attributeTypes.put(columnName, dataType);
         }
 
-        for (String s : attributeTypes.keySet()) {  // durchlaufe alle Attribute
+        for (String s : attributeTypes.keySet()) {
             String sql = "SELECT " + s + " FROM " + tableName + " WHERE " + s + " is not null;";
             Statement st = con.createStatement();
             ResultSet rs1 = st.executeQuery(sql);
@@ -62,11 +62,12 @@ public class Main {
 
         String[] attributs = new String[num_attributes];
         for (int i = 0; i < num_attributes; i++) {
-            attributs[i] = (i % 2 == 0)? "String" : "int";
+            attributs[i] = (i % 2 == 0)? "int" : "String";
         }
 
         StringBuilder sb = new StringBuilder("CREATE TABLE H (");
-        for (int i = 0; i < num_attributes; i++) {
+        sb.append("Oid INT, ");
+        for (int i = 1; i < num_attributes; i++) {
             if (attributs[i].equals("String")) {
                 sb.append("a" + i + " VARCHAR(20)");
             } else {
@@ -82,16 +83,22 @@ public class Main {
         createTable.execute(sb.toString());
 
         StringBuilder insert = new StringBuilder("INSERT INTO H VALUES ");
+        int oid = 1;
         for (int i = 0; i < num_tuples; i++) {
             insert.append("(");
             for (int j = 0; j < num_attributes; j++) {
-                if (RANDOM.nextDouble() <= sparsity) {
-                    insert.append("NULL");
+                if (j == 0) {
+                    insert.append(oid);
+                    oid++;
                 } else {
-                    if (attributs[j].equals("String")) {
-                        insert.append("'" + generateRandomString(1, 20) + "'");
+                    if (RANDOM.nextDouble() <= sparsity) {
+                        insert.append("NULL");
                     } else {
-                        insert.append(RANDOM.nextInt(100));
+                        if (attributs[j].equals("String")) {
+                            insert.append("'" + generateRandomString(1, 20) + "'");
+                        } else {
+                            insert.append(RANDOM.nextInt(100));
+                        }
                     }
                 }
                 if (j != num_attributes - 1) {

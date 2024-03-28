@@ -12,7 +12,34 @@ public class Main {
 
     public static void main(String[] args) throws SQLException {
         con = DriverManager.getConnection(url, user, pwd);
-        generate(25, 0.1, 6);
+        generate(10, 0.45, 6);
+
+        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+    }
+
+    public static void h2v(String tableName) throws SQLException {
+        DatabaseMetaData metaData = con.getMetaData();
+        ResultSet resultSet = metaData.getColumns(null, null, tableName, null);
+
+        Map<String, String> attributeTypes = new HashMap<>();
+
+        while (resultSet.next()) {
+            String columnName = resultSet.getString("COLUMN_NAME");
+            String dataType = resultSet.getString("TYPE_NAME");
+            attributeTypes.put(columnName, dataType);
+        }
+
+        for (String s : attributeTypes.keySet()) {  // durchlaufe alle Attribute
+            String sql = "SELECT " + s + " FROM " + tableName + " WHERE " + s + " is not null;";
+            Statement st = con.createStatement();
+            ResultSet rs1 = st.executeQuery(sql);
+            while (rs1.next()) {
+                String value = rs1.getString(s);
+                System.out.println(s + " Wert: " + value);
+            }
+
+        }
+
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {

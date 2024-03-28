@@ -39,13 +39,15 @@ public class Main {
 
         for (String s : attributeTypes.keySet()) {
             if (!s.equals("oid")) {
-                String sql = "SELECT " + s + " FROM " + tableName + " WHERE " + s + " is not null;";
+                String sql = "SELECT oid," + s + " FROM " + tableName + " WHERE " + s + " is not null;";
+                System.out.println(sql);
                 Statement st = con.createStatement();
                 ResultSet rs1 = st.executeQuery(sql);
                 while (rs1.next()) {
+                    int oidValue = rs1.getInt("oid");
                     String value = rs1.getString(s);
-                    StringBuilder insert = new StringBuilder("INSERT INTO H2V VALUES (1, ");
-                    insert.append("'" + s + "', '" + value + "');");
+                    StringBuilder insert = new StringBuilder("INSERT INTO H2V VALUES ( ");
+                    insert.append(oidValue + ", '" + s + "', '" + value + "');");
                     Statement stInsertVertical = con.createStatement();
                     stInsertVertical.execute(insert.toString());
                 }

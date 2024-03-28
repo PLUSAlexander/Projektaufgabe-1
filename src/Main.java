@@ -53,7 +53,6 @@ public class Main {
                 }
             }
         }
-
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {

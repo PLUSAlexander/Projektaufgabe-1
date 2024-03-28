@@ -18,6 +18,14 @@ public class Main {
     }
 
     public static void h2v(String tableName) throws SQLException {
+        Statement stDrop = con.createStatement();
+        String sqlDrop = "DROP Table if exists h2v;";
+        stDrop.execute(sqlDrop);
+
+        Statement stCreateVertical = con.createStatement();
+        String sqlCreateVertical = "CREATE TABLE H2V (Oid int, Key varchar(5), Val varchar(255));";
+        stCreateVertical.execute(sqlCreateVertical);
+
         DatabaseMetaData metaData = con.getMetaData();
         ResultSet resultSet = metaData.getColumns(null, null, tableName, null);
 
@@ -36,6 +44,11 @@ public class Main {
             while (rs1.next()) {
                 String value = rs1.getString(s);
                 System.out.println(s + " Wert: " + value);
+                StringBuilder insert = new StringBuilder("INSERT INTO H2V VALUES (1, ");
+                insert.append("'" + s + "', '" + value + "');");
+
+                Statement stInsertVertical = con.createStatement();
+                stInsertVertical.execute(insert.toString());
             }
 
         }

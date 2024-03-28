@@ -12,18 +12,22 @@ public class Main {
 
     public static void main(String[] args) throws SQLException {
         con = DriverManager.getConnection(url, user, pwd);
-        generate(10, 0.45, 6);
+        generate(10, 0.2, 6);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
     }
 
     public static void h2v(String tableName) throws SQLException {
         Statement stDrop = con.createStatement();
-        String sqlDrop = "DROP Table if exists h2v;";
+        String sqlDrop = "DROP Table if exists h2v_temp;";
         stDrop.execute(sqlDrop);
+        Statement orginalDrop = con.createStatement();
+        String sqlOrginalDrop = "DROP Table if exists h2v;";
+        orginalDrop.execute(sqlOrginalDrop);
+
 
         Statement stCreateVertical = con.createStatement();
-        String sqlCreateVertical = "CREATE TABLE H2V (Oid int, Key varchar(5), Val varchar(255));";
+        String sqlCreateVertical = "CREATE TABLE H2V_temp (Oid int, Key varchar(5), Val varchar(255));";
         stCreateVertical.execute(sqlCreateVertical);
 
         DatabaseMetaData metaData = con.getMetaData();
@@ -46,13 +50,22 @@ public class Main {
                 while (rs1.next()) {
                     int oidValue = rs1.getInt("oid");
                     String value = rs1.getString(s);
-                    StringBuilder insert = new StringBuilder("INSERT INTO H2V VALUES ( ");
+                    StringBuilder insert = new StringBuilder("INSERT INTO H2V_temp VALUES ( ");
                     insert.append(oidValue + ", '" + s + "', '" + value + "');");
                     Statement stInsertVertical = con.createStatement();
                     stInsertVertical.execute(insert.toString());
                 }
             }
         }
+
+
+        String sqlSortTable = "CREATE TABLE H2V AS SELECT * FROM H2V_temp ORDER BY Oid ASC, key;";
+        Statement stSortTable = con.createStatement();
+        stSortTable.execute(sqlSortTable);
+
+        String sqlDropTemp = "DROP TABLE H2V_temp;";
+        Statement stDropTemp = con.createStatement();
+        stDropTemp.execute(sqlDropTemp);
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {

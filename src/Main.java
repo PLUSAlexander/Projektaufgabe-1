@@ -38,19 +38,18 @@ public class Main {
         }
 
         for (String s : attributeTypes.keySet()) {
-            String sql = "SELECT " + s + " FROM " + tableName + " WHERE " + s + " is not null;";
-            Statement st = con.createStatement();
-            ResultSet rs1 = st.executeQuery(sql);
-            while (rs1.next()) {
-                String value = rs1.getString(s);
-                System.out.println(s + " Wert: " + value);
-                StringBuilder insert = new StringBuilder("INSERT INTO H2V VALUES (1, ");
-                insert.append("'" + s + "', '" + value + "');");
-
-                Statement stInsertVertical = con.createStatement();
-                stInsertVertical.execute(insert.toString());
+            if (!s.equals("oid")) {
+                String sql = "SELECT " + s + " FROM " + tableName + " WHERE " + s + " is not null;";
+                Statement st = con.createStatement();
+                ResultSet rs1 = st.executeQuery(sql);
+                while (rs1.next()) {
+                    String value = rs1.getString(s);
+                    StringBuilder insert = new StringBuilder("INSERT INTO H2V VALUES (1, ");
+                    insert.append("'" + s + "', '" + value + "');");
+                    Statement stInsertVertical = con.createStatement();
+                    stInsertVertical.execute(insert.toString());
+                }
             }
-
         }
 
     }

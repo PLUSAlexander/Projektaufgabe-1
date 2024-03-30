@@ -74,7 +74,7 @@ public class Main {
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {
-        if (num_attributes <= 0 | num_tuples <= 0 || num_attributes > 1600 || sparsity > 1.0 || sparsity < 0.0) {
+        if (num_attributes <= 0 || num_tuples <= 0 || num_attributes > 1600 || sparsity > 1.0 || sparsity < 0.0) {
             throw new SQLException("generate() args wrong!!!");
         }
         Statement st = con.createStatement();

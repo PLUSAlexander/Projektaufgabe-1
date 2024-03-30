@@ -12,7 +12,7 @@ public class Main {
 
     public static void main(String[] args) throws SQLException {
         con = DriverManager.getConnection(url, user, pwd);
-        generate(10, 0.2, 6);
+        generate(3, 0.35, 1);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
     }
@@ -69,6 +69,9 @@ public class Main {
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {
+        if (num_attributes <= 0) {
+            return;
+        }
         Statement st = con.createStatement();
         String sql = "DROP Table if exists H;";
         st.execute(sql);
@@ -79,12 +82,15 @@ public class Main {
         }
 
         StringBuilder sb = new StringBuilder("CREATE TABLE H (");
-        sb.append("Oid INT, ");
-        for (int i = 1; i < num_attributes; i++) {
-            if (attributs[i].equals("String")) {
-                sb.append("a" + i + " VARCHAR(20)");
+        for (int i = 0; i < num_attributes; i++) {
+            if (i == 0) {
+                sb.append("Oid INT ");
             } else {
-                sb.append("a" + i + " INT");
+                if (attributs[i].equals("String")) {
+                    sb.append("a" + i + " VARCHAR(20)");
+                } else {
+                    sb.append("a" + i + " INT");
+                }
             }
             if (i < num_attributes - 1) {
                 sb.append(", ");
@@ -108,7 +114,7 @@ public class Main {
                         insert.append("NULL");
                     } else {
                         if (attributs[j].equals("String")) {
-                            insert.append("'" + generateRandomString(1, 20) + "'");
+                            insert.append("'" + generateRandomString(1, 5) + "'");
                         } else {
                             insert.append(RANDOM.nextInt(100));
                         }

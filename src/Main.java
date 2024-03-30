@@ -12,7 +12,7 @@ public class Main {
 
     public static void main(String[] args) throws SQLException {
         con = DriverManager.getConnection(url, user, pwd);
-        generate(3, 0.35, 1);
+        generate(4, 0.51, 1601);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
     }
@@ -69,8 +69,8 @@ public class Main {
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {
-        if (num_attributes <= 0) {
-            return;
+        if (num_attributes <= 0 | num_tuples <= 0 || num_attributes > 1600 || sparsity > 1.0 || sparsity < 0.0) {
+            throw new SQLException("generate() args wrong!!!");
         }
         Statement st = con.createStatement();
         String sql = "DROP Table if exists H;";

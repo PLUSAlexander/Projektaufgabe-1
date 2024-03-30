@@ -12,7 +12,12 @@ public class Main {
 
     public static void main(String[] args) throws SQLException {
         con = DriverManager.getConnection(url, user, pwd);
-        generate(4, 0.51, 1601);
+        /*
+        for (int i = 1; i <= 100; i++) {
+            generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
+        } */
+
+        generate(20, 0.1, 7);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
     }
@@ -44,7 +49,7 @@ public class Main {
         for (String s : attributeTypes.keySet()) {
             if (!s.equals("oid")) {
                 String sql = "SELECT oid," + s + " FROM " + tableName + " WHERE " + s + " is not null;";
-                System.out.println(sql);
+                //System.out.println(sql);
                 Statement st = con.createStatement();
                 ResultSet rs1 = st.executeQuery(sql);
                 while (rs1.next()) {
@@ -101,6 +106,8 @@ public class Main {
         Statement createTable = con.createStatement();
         createTable.execute(sb.toString());
 
+
+        Map<String, Map<String, Integer>> attributeCounts = new HashMap<>();
         StringBuilder insert = new StringBuilder("INSERT INTO H VALUES ");
         int oid = 1;
         for (int i = 0; i < num_tuples; i++) {
@@ -113,10 +120,20 @@ public class Main {
                     if (RANDOM.nextDouble() <= sparsity) {
                         insert.append("NULL");
                     } else {
+                        String attributeValue;
                         if (attributs[j].equals("String")) {
-                            insert.append("'" + generateRandomString(1, 5) + "'");
+                            attributeValue = generateRandomString(1, 5);
                         } else {
-                            insert.append(RANDOM.nextInt(100));
+                            attributeValue = Integer.toString(RANDOM.nextInt(num_tuples));
+                        }
+
+                        Map<String, Integer> columnCounts = attributeCounts.computeIfAbsent("a" + j, k -> new HashMap<>());
+                        int count = columnCounts.getOrDefault(attributeValue, 0);
+                        if (count >= 5) {
+                            insert.append("NULL");
+                        } else {
+                            insert.append("'" + attributeValue + "'");
+                            columnCounts.put(attributeValue, count + 1);
                         }
                     }
                 }
@@ -133,6 +150,7 @@ public class Main {
         insertInto.execute(insert.toString());
 
     }
+
 
 
     public static String generateRandomString(int minLength, int maxLength) {

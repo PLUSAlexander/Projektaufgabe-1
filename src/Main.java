@@ -57,6 +57,32 @@ public class Main {
         Statement st = con.createStatement();
         st.execute(sb.toString());
 
+        // Fill Table
+
+        ArrayList<String> oidList = new ArrayList<>();
+        ArrayList<String> valList = new ArrayList<>();
+        for (int i = 0; i < attributeNames.size(); i++) {
+            String oid = "select oid from h2v where key = " + attributeNames.get(i) + ";";
+            String val = "select val from h2v where key = " + attributeNames.get(i) + ";";
+            String key = attributeNames.get(i); // speichert name des attributs z.B.: a1, ..., an
+            ResultSet rs1 = st.executeQuery(oid); // speichert ergebnis  oid
+            ResultSet rs2 = st.executeQuery(val); // speichert ergebnis  val
+            while (rs1.next()) {
+                oidList.add(rs1.getString(1));
+            }
+            while (rs2.next()) {
+                valList.add(rs2.getString(1));
+            }
+            StringBuilder insertValues = new StringBuilder();
+
+            for (int j = 0; j < oidList.size(); j++) {
+                insertValues.append("insert into v2h (oid, " + key + ") values(" + oidList.get(j) + ", " + valList.get(j) + ");");
+                st.execute(insertValues.toString());
+
+            }
+
+        }
+
 
     }
 

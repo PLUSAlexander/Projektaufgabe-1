@@ -37,6 +37,9 @@ public class Sofia {  // eachAttribute5xMax
     // TODO: implement V2H
     // nicht Select oid, a1 from V where key = a2 and val b
     // sondern: Select oid, a1 from H where a2 = b
+    // insert into v2h (Ai) Values (attWert);
+
+
 
     public static void v2h(String tableName) throws SQLException {
         Statement stDrop = con.createStatement();

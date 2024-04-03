@@ -1,9 +1,10 @@
+import javax.print.DocFlavor;
 import java.sql.*;
 import java.util.*;
 
 //Projektaufgabe 1
 
-public class Sofia {  // eachAttribute5xMax
+public class Sofia {
     private static String url = "jdbc:postgresql://localhost:5432/DJRProjektaufgabe1";
     private static String user = "postgres";
     private static String pwd = "dreizehn13";
@@ -27,7 +28,7 @@ public class Sofia {  // eachAttribute5xMax
             System.out.println("Failed to Connect: " + e.getMessage());
         }
 
-        showConnectionAndSQL();
+       showConnectionAndSQL();
 
         //generate(30, 0.2, 7);
         //h2v("h");
@@ -42,10 +43,12 @@ public class Sofia {  // eachAttribute5xMax
 
 
     public static void v2h(String tableName) throws SQLException {
+        //Delete if already exists
         Statement stDrop = con.createStatement();
         String sqlDrop = "DROP Table if exists v2h;";
         stDrop.execute(sqlDrop);
 
+        //Create horizontal table
         StringBuilder sb = new StringBuilder();
         sb.append("CREATE TABLE v2h (Oid int, ");
         ArrayList<String> attributeNames = new ArrayList<>();
@@ -74,7 +77,69 @@ public class Sofia {  // eachAttribute5xMax
         System.out.printf(sb.toString());
         Statement st = con.createStatement();
         st.execute(sb.toString());
+
+
+
+
+        //Fill horizontal table
+        Statement getOid = con.createStatement();
+        StringBuilder stb = new StringBuilder();
+        stb.append("SELECT distinct Oid from " + tableName);
+        ResultSet rset = getOid.executeQuery(stb.toString()); // number of tuples in horizontal table
+        List<String> oids = new ArrayList<>();
+        while (rset.next()){
+            String oid = rset.getString(1);
+            oids.add(oid);
+        }
+
+        HashMap<String, HashMap<String, String>> attributes = new HashMap<>(); //map to safe every value of each attribute
+
+        for (int i = 0;  i < attributeNames.size(); i++) {
+            StringBuilder builder = new StringBuilder();
+            String attName = "a" + i;
+            Statement getAttValues = con.createStatement();
+
+            builder.append("Select Oid, val From " + tableName + "Where key = 'a" + i + "'");
+            ResultSet results = getAttValues.executeQuery(getAttValues.toString());
+            HashMap<String, String> attributeValues = new HashMap<>();
+
+            while (results.next()) {
+
+                attributeValues.put(results.getString(1), results.getString((2))); //To Do
+            }
+            attributes.put(attName, attributeValues);
+        }
+
+        int Oid = 1;
+
+        for(int i = 0; i<oids.size(); i++) {
+            StringBuilder build = new StringBuilder();
+            build.append("INSERT into " + tableName + "VALUES(");
+
+            for(int j = 0; j < attributes.size() ;j++) {
+                String attName = "a" + i;
+                HashMap<String, String> attributeVals = attributes.get(attName);
+
+                if(attributeVals.containsKey(Oid)){
+                    String value = attributeVals.get(Oid);
+                    build.append(value);
+                }
+                else {
+                    build.append("NULL");
+                }
+
+                if (i < oids.size() - 1) {
+                    build.append(", ");
+                }
+            }
+            sb.append(");");
+            Statement insertAttValues = con.createStatement();
+            insertAttValues.execute(build.toString());
+        }
     }
+
+
+
 
 
 

@@ -56,7 +56,7 @@ public class Main {
         System.out.println(sb.toString());
         Statement st = con.createStatement();
         st.execute(sb.toString());
-        /*
+
         String maxOidString = "SELECT MAX(oid) AS max_value FROM " + tableName + ";";
         Statement stMaxOid = con.createStatement();
         ResultSet rsMaxOid = stMaxOid.executeQuery(maxOidString);
@@ -69,10 +69,10 @@ public class Main {
         stTemp.execute(createTemp);
         for (int i = 1; i <= maxOid; i++) {
             Statement insertTemp = con.createStatement();
-            String insert = "insert into v2h values(" + i + ");";
+            String insert = "insert into temp_table values(" + i + ");";
             st.execute(insert);
         }
-        */
+
 
         // Fill Table
         for (String attributeName : attributeNames) {
@@ -97,20 +97,17 @@ public class Main {
 
 
 
+        /*
         Statement stOid = con.createStatement();
         String selectOids = "Select distinct oid from v2h order by oid;";
         ResultSet rsOids = stOid.executeQuery(selectOids);
         while (rsOids.next()) {
             System.out.println(rsOids.getString(1));
-        }
+        }   */
 
 
 
     }
-
-
-
-
 
 
 

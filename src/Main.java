@@ -17,7 +17,7 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(20, 0.1, 10);
+        generate(3, 0.3, 4);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         v2h("h2v");
@@ -44,9 +44,9 @@ public class Main {
         for (int i = 0; i <= attributeNames.size() - 1; i++) {
             String att = attributeNames.get(i);
             if (i % 2 == 0) {
-                sb.append(att + " int");
-            } else {
                 sb.append(att + " varchar(255)");
+            } else {
+                sb.append(att + " int");
             }
             if (i < attributeNames.size() - 1) {
                 sb.append(", ");
@@ -59,29 +59,33 @@ public class Main {
 
         // Fill Table
 
-        ArrayList<String> oidList = new ArrayList<>();
-        ArrayList<String> valList = new ArrayList<>();
-        for (int i = 0; i < attributeNames.size(); i++) {
-            String oid = "select oid from h2v where key = " + attributeNames.get(i) + ";";
-            String val = "select val from h2v where key = " + attributeNames.get(i) + ";";
-            String key = attributeNames.get(i); // speichert name des attributs z.B.: a1, ..., an
-            ResultSet rs1 = st.executeQuery(oid); // speichert ergebnis  oid
-            ResultSet rs2 = st.executeQuery(val); // speichert ergebnis  val
-            while (rs1.next()) {
-                oidList.add(rs1.getString(1));
-            }
-            while (rs2.next()) {
-                valList.add(rs2.getString(1));
-            }
-            StringBuilder insertValues = new StringBuilder();
 
-            for (int j = 0; j < oidList.size(); j++) {
-                insertValues.append("insert into v2h (oid, " + key + ") values(" + oidList.get(j) + ", " + valList.get(j) + ");");
-                st.execute(insertValues.toString());
+        for (String attributeName : attributeNames) {
+            String oidQuery = "select oid from h2v where key = '" + attributeName + "';";
+            String valQuery = "select val from h2v where key = '" + attributeName + "';";
 
+            Statement stOid = con.createStatement();
+            Statement stVal = con.createStatement();
+
+            ResultSet rs1 = stOid.executeQuery(oidQuery);
+            ResultSet rs2 = stVal.executeQuery(valQuery);
+
+            while (rs1.next() && rs2.next()) {
+                String oidString = rs1.getString(1);
+                int oid = Integer.parseInt(oidString);
+                String val = rs2.getString(1);
+                String insertValues = "insert into v2h (oid, " + attributeName + ") values(" + oid + ", '" + val + "');";
+                System.out.println(insertValues);
+                st.executeUpdate(insertValues);
             }
 
+            // Schließe die ResultSets und Statements, wenn sie nicht mehr benötigt werden
+            rs1.close();
+            rs2.close();
+            stOid.close();
+            stVal.close();
         }
+
 
 
     }

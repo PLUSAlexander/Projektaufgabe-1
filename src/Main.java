@@ -17,10 +17,54 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(20, 0.1, 7);
+        generate(20, 0.1, 10);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        v2h("h2v");
     }
+
+    public static void v2h(String tableName) throws SQLException {
+        Statement stDrop = con.createStatement();
+        String sqlDrop = "DROP Table if exists v2h;";
+        stDrop.execute(sqlDrop);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("CREATE TABLE v2h (Oid int, ");
+        ArrayList<String> attributeNames = new ArrayList<>();
+
+        Statement stm = con.createStatement();
+        StringBuilder sbuilder = new StringBuilder();
+        sbuilder.append("SELECT distinct Key FROM " + tableName);
+        ResultSet rs = stm.executeQuery(sbuilder.toString());
+        while (rs.next()) {
+            attributeNames.add(rs.getString(1));
+        }
+        Collections.sort(attributeNames);
+
+        for (int i = 0; i <= attributeNames.size() - 1; i++) {
+            String att = attributeNames.get(i);
+            if (i % 2 == 0) {
+                sb.append(att + " int");
+            } else {
+                sb.append(att + " varchar(255)");
+            }
+            if (i < attributeNames.size() - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append(");");
+        System.out.println(sb.toString());
+        Statement st = con.createStatement();
+        st.execute(sb.toString());
+
+
+    }
+
+
+
+
+
+
 
     public static void h2v(String tableName) throws SQLException {
         Statement stDrop = con.createStatement();

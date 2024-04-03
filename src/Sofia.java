@@ -31,6 +31,46 @@ public class Sofia {  // eachAttribute5xMax
 
         //generate(30, 0.2, 7);
         //h2v("h");
+        //v2h("v");
+    }
+
+    // TODO: implement V2H
+    // nicht Select oid, a1 from V where key = a2 and val b
+    // sondern: Select oid, a1 from H where a2 = b
+
+    public static void v2h(String tableName) throws SQLException {
+        Statement stDrop = con.createStatement();
+        String sqlDrop = "DROP Table if exists v2h;";
+        stDrop.execute(sqlDrop);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("CREATE TABLE v2h (Oid int, ");
+        ArrayList<String> attributeNames = new ArrayList<>();
+
+        Statement stm = con.createStatement();
+        StringBuilder sbuilder = new StringBuilder();
+        sbuilder.append("SELECT distinct Key FROM " + tableName);
+        ResultSet rs = stm.executeQuery(sbuilder.toString());
+        while (rs.next()) {
+            attributeNames.add(rs.getString(1));
+        }
+        Collections.sort(attributeNames);
+
+        for (int i = 0; i < attributeNames.size(); i++) {
+            String att = attributeNames.get(i);
+            if (i % 2 == 0) {
+                sb.append(att + " int");
+            } else {
+                sb.append(att + " varchar(255)");
+            }
+            if (i < attributeNames.size() - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append(");");
+        System.out.printf(sb.toString());
+        Statement st = con.createStatement();
+        st.execute(sb.toString());
     }
 
 

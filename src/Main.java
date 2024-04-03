@@ -60,12 +60,18 @@ public class Main {
         String maxOidString = "SELECT MAX(oid) AS max_value FROM " + tableName + ";";
         Statement stMaxOid = con.createStatement();
         ResultSet rsMaxOid = stMaxOid.executeQuery(maxOidString);
+        int maxOid = 0;
         while (rsMaxOid.next()) {
-            int maxOid = Integer.parseInt(rsMaxOid.getString(1));
+            maxOid = Integer.parseInt(rsMaxOid.getString(1));
         }
         Statement stTemp = con.createStatement();
         String createTemp = "CREATE TEMPORARY TABLE temp_table (oid int);";
         stTemp.execute(createTemp);
+        for (int i = 1; i <= maxOid; i++) {
+            Statement insertTemp = con.createStatement();
+            String insert = "insert into temp_table values(" + i + ");";
+            st.execute(insert);
+        }
 
 
         // Fill Table

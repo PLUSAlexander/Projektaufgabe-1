@@ -57,9 +57,18 @@ public class Main {
         Statement st = con.createStatement();
         st.execute(sb.toString());
 
+        String maxOidString = "SELECT MAX(oid) AS max_value FROM " + tableName + ";";
+        Statement stMaxOid = con.createStatement();
+        ResultSet rsMaxOid = stMaxOid.executeQuery(maxOidString);
+        while (rsMaxOid.next()) {
+            int maxOid = Integer.parseInt(rsMaxOid.getString(1));
+        }
+        Statement stTemp = con.createStatement();
+        String createTemp = "CREATE TEMPORARY TABLE temp_table (oid int);";
+        stTemp.execute(createTemp);
+
+
         // Fill Table
-
-
         for (String attributeName : attributeNames) {
             String oidQuery = "select oid from h2v where key = '" + attributeName + "';";
             String valQuery = "select val from h2v where key = '" + attributeName + "';";
@@ -78,12 +87,13 @@ public class Main {
                 System.out.println(insertValues);
                 st.executeUpdate(insertValues);
             }
+        }
 
-            // Schließe die ResultSets und Statements, wenn sie nicht mehr benötigt werden
-            rs1.close();
-            rs2.close();
-            stOid.close();
-            stVal.close();
+        Statement stOid = con.createStatement();
+        String selectOids = "Select distinct oid from v2h order by oid;";
+        ResultSet rsOids = stOid.executeQuery(selectOids);
+        while (rsOids.next()) {
+            System.out.println(rsOids.getString(1));
         }
 
 

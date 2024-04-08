@@ -17,10 +17,11 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(10, 0.3, 4);
+        generate(5, 0.2, 5);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         v2h("h2v");
+        showConnectionAndSQL();
     }
 
 
@@ -302,6 +303,22 @@ public class Main {
             sb.append(randomChar);
         }
         return sb.toString();
+    }
+
+    public static void showConnectionAndSQL() throws SQLException {
+        Statement st = con.createStatement();
+        String delete = "DROP Table if exists showCon;";
+        st.execute(delete);
+
+        Statement stm = con.createStatement();
+        String create = "CREATE TABLE showCon(Oid INT, a1 VARCHAR(5));";
+        stm.execute(create);
+
+        Statement stmnt = con.createStatement();
+        String insert = "INSERT INTO showCon VALUES(1, 'abc');";
+        stmnt.execute(insert);
+
+        System.out.println("Table created and filled.");
     }
 
 

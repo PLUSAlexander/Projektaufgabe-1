@@ -17,96 +17,124 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(3, 0.3, 4);
+        generate(10, 0.05, 4);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         v2h("h2v");
     }
 
+
+
+
     public static void v2h(String tableName) throws SQLException {
+        //delete Horizontal table and v2helper if they already exist
+        Statement stmDrop = con.createStatement();
+        String sqlDrop = "DROP Table if exists " + tableName + "V2H;";
+        stmDrop.execute(sqlDrop);
         Statement stDrop = con.createStatement();
-        String sqlDrop = "DROP Table if exists v2h;";
-        stDrop.execute(sqlDrop);
+        String stringDrop = "DROP Table if exists v2helper;";
+        stDrop.execute(stringDrop);
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("CREATE TABLE v2h (Oid int, ");
+
+        //get attribute names
+        Statement stmGetAttNames = con.createStatement();
+        String getAttNames = "SELECT distinct Key FROM " + tableName;
         ArrayList<String> attributeNames = new ArrayList<>();
-
-        Statement stm = con.createStatement();
-        StringBuilder sbuilder = new StringBuilder();
-        sbuilder.append("SELECT distinct Key FROM " + tableName);
-        ResultSet rs = stm.executeQuery(sbuilder.toString());
+        ResultSet rs = stmGetAttNames.executeQuery(getAttNames);
         while (rs.next()) {
             attributeNames.add(rs.getString(1));
         }
         Collections.sort(attributeNames);
 
-        for (int i = 0; i <= attributeNames.size() - 1; i++) {
-            String att = attributeNames.get(i);
-            if (i % 2 == 0) {
-                sb.append(att + " varchar(255)");
-            } else {
-                sb.append(att + " int");
-            }
-            if (i < attributeNames.size() - 1) {
-                sb.append(", ");
-            }
-        }
-        sb.append(");");
-        System.out.println(sb.toString());
-        Statement st = con.createStatement();
-        st.execute(sb.toString());
 
-        String maxOidString = "SELECT MAX(oid) AS max_value FROM " + tableName + ";";
+        //create helper table for joins and fill initially with all oids (as integers)
+        Statement stmJoinHelper = con.createStatement();
+        String joinHelper = "CREATE table v2helper (oid int);";
+        stmJoinHelper.execute(joinHelper);
+
         Statement stMaxOid = con.createStatement();
+        String maxOidString = "SELECT MAX(oid) AS max_value FROM " + tableName + ";";
         ResultSet rsMaxOid = stMaxOid.executeQuery(maxOidString);
         int maxOid = 0;
         while (rsMaxOid.next()) {
-            maxOid = Integer.parseInt(rsMaxOid.getString(1));
-        }
-        Statement stTemp = con.createStatement();
-        String createTemp = "CREATE TEMPORARY TABLE temp_table (oid int);";
-        stTemp.execute(createTemp);
+            maxOid = Integer.parseInt(rsMaxOid.getString(1));}
+
         for (int i = 1; i <= maxOid; i++) {
-            Statement insertTemp = con.createStatement();
-            String insert = "insert into temp_table values(" + i + ");";
-            st.execute(insert);
+            Statement stmInsertHelper = con.createStatement();
+            String insertHelper = "insert into v2helper values(" + i + ");";
+            stmInsertHelper.execute(insertHelper);
         }
 
 
-        // Fill Table
-        for (String attributeName : attributeNames) {
-            String oidQuery = "select oid from h2v where key = '" + attributeName + "';";
-            String valQuery = "select val from h2v where key = '" + attributeName + "';";
+        //create temporary table for each attribute
+        int attCounter = 0;
 
-            Statement stOid = con.createStatement();
-            Statement stVal = con.createStatement();
+        for (String attName : attributeNames) {
+            Statement stmGetAttOid = con.createStatement();       //get oids from all tuples that have the attribute
+            String getAttOid = "SELECT oid FROM " + tableName + " WHERE key = '" + attName + "';";
+            ResultSet resultOid = stmGetAttOid.executeQuery(getAttOid);
 
-            ResultSet rs1 = stOid.executeQuery(oidQuery);
-            ResultSet rs2 = stVal.executeQuery(valQuery);
+            Statement stmGetAttVal = con.createStatement();      //get values from all tuples that have the attribute
+            String getAttVal = "SELECT val FROM " + tableName + " WHERE key = '" + attName + "';";
+            ResultSet resultVal = stmGetAttVal.executeQuery(getAttVal);
 
-            while (rs1.next() && rs2.next()) {
-                String oidString = rs1.getString(1);
-                int oid = Integer.parseInt(oidString);
-                String val = rs2.getString(1);
-                String insertValues = "insert into v2h (oid, " + attributeName + ") values(" + oid + ", '" + val + "');";
-                System.out.println(insertValues);
-                st.executeUpdate(insertValues);
+            Statement stmCreateHelper = con.createStatement();
+            String createHelper;
+            if(attCounter % 2 == 0){       //adjust type (String or Integer)
+                createHelper = "CREATE TEMPORARY TABLE " + attName + " (oid int, " + attName + " varchar(255));";
             }
+            else {
+                createHelper = "CREATE TEMPORARY TABLE " + attName + " (oid int, " + attName + " int);";
+            }
+            stmCreateHelper.execute(createHelper);
+
+            while (resultOid.next() && resultVal.next()) {
+                Statement stmFillHelper = con.createStatement();
+                String oidString = resultOid.getString(1);
+                int oid = Integer.parseInt(oidString);
+                String valString = resultVal.getString(1);
+                if(attCounter % 2 == 0){
+                    String fillHelper = "insert into " + attName + "(oid, " + attName + ") values(" + oid + ", '" + valString + "');";
+                    stmFillHelper.executeUpdate(fillHelper);
+                }
+                else {
+                    int val = Integer.parseInt(valString);
+                    String fillHelper = "insert into " + attName + "(oid, " + attName + ") values(" + oid + ", " + val + ");";
+                    stmFillHelper.executeUpdate(fillHelper);
+                }
+            }
+            attCounter++;
+
+
+            //join attribute with the helper and update the helper
+            Statement stmCreateV3helper = con.createStatement();
+            String createV3helper = "CREATE TABLE v3helper AS (SELECT * FROM v2helper);";
+            stmCreateV3helper.executeUpdate(createV3helper);
+
+            Statement stmDeleteOldV2helper = con.createStatement();
+            String deleteOldV2helper = "DROP Table if exists v2helper;";
+            stmDeleteOldV2helper.executeUpdate(deleteOldV2helper);
+
+            Statement stmJoinAttOfTuple = con.createStatement();
+            String joinAttOfTuple = "CREATE TABLE v2helper AS (SELECT v3helper.*, " + attName + "." + attName + " FROM v3helper LEFT JOIN " + attName + " ON v3helper.oid = " + attName + ".oid);";
+            stmJoinAttOfTuple.executeUpdate(joinAttOfTuple);
+
+            Statement stmDeleteOldV3helper = con.createStatement();
+            String deleteOldV3helper = "DROP Table if exists v3helper;";
+            stmDeleteOldV3helper.executeUpdate(deleteOldV3helper);
         }
 
 
+        //sort table
+        String sqlSortTable = "CREATE TABLE " + tableName + "V2H AS SELECT * FROM v2helper ORDER BY oid ASC;";
+        Statement stSortTable = con.createStatement();
+        stSortTable.execute(sqlSortTable);
 
-        /*
-        Statement stOid = con.createStatement();
-        String selectOids = "Select distinct oid from v2h order by oid;";
-        ResultSet rsOids = stOid.executeQuery(selectOids);
-        while (rsOids.next()) {
-            System.out.println(rsOids.getString(1));
-        }   */
+        String sqlDropTemp = "DROP TABLE v2helper;";
+        Statement stDropTemp = con.createStatement();
+        stDropTemp.execute(sqlDropTemp);
 
-
-
+        System.out.println("Successfully converted to horizontal.");
     }
 
 

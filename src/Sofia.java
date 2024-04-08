@@ -4,9 +4,9 @@ import java.util.*;
 //Projektaufgabe 1
 
 public class Sofia {
-    private static String url = "jdbc:postgresql://localhost:5432/DJRProjektaufgabe1";
+    private static String url = "jdbc:postgresql://localhost/postgres";
     private static String user = "postgres";
-    private static String pwd = "dreizehn13";
+    private static String pwd = "1234";
     private static Connection con;
     private static final Random RANDOM = new Random();
     static List<String> stringValues = Arrays.asList("a", "b", "c", "d", "e", "f");                  //list of possible String values

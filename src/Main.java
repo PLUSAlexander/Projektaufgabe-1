@@ -17,7 +17,7 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(10, 0.05, 4);
+        generate(10, 0.3, 4);
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         v2h("h2v");
@@ -225,8 +225,8 @@ public class Main {
 
 
         Map<String, Map<String, Integer>> attributeCounts = new HashMap<>();
-        StringBuilder insert = new StringBuilder("INSERT INTO H VALUES ");
         int oid = 1;
+        StringBuilder insert = new StringBuilder("INSERT INTO H VALUES ");
         for (int i = 0; i < num_tuples; i++) {
             insert.append("(");
             for (int j = 0; j < num_attributes; j++) {
@@ -265,6 +265,26 @@ public class Main {
         insert.append(");");
         Statement insertInto = con.createStatement();
         insertInto.execute(insert.toString());
+
+        //insert special case with all attributes NULL
+        StringBuilder insertSpecial = new StringBuilder("INSERT INTO H VALUES (");
+
+        for (int i = 0; i < num_attributes; i++) {
+            if (i == 0)
+                insertSpecial.append(oid);
+            else
+                insertSpecial.append("NULL");
+            if (i != num_attributes - 1) {
+                insertSpecial.append(", ");
+            }
+        }
+        insertSpecial.append(");");
+
+        Statement insertSpecialInto = con.createStatement();
+        insertSpecialInto.execute(insertSpecial.toString());
+
+
+        System.out.println("Table created and filled.");
 
     }
 

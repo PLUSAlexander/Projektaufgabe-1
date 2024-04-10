@@ -27,7 +27,7 @@ public class Sofia {
 
         showConnectionAndSQL();
         //generate(30, 0.2, 7);
-        generate(7,0.0,4);
+        generate(7,0.5,4);
         h2v("h");
         v2h("hh2v");
     }
@@ -66,6 +66,7 @@ public class Sofia {
         Statement createTable = con.createStatement();
         createTable.execute(sb.toString());
 
+        Random rand = new Random(14);
 
         //fill table
         StringBuilder insert = new StringBuilder("INSERT INTO H VALUES ");
@@ -78,7 +79,7 @@ public class Sofia {
                     insert.append(oid);
                     oid++;
                 } else {
-                    if (RANDOM.nextDouble() <= sparsity) {
+                    if (rand.nextDouble() <= sparsity) {
                         insert.append("NULL");
                     } else {
                         String att = "a" + j;

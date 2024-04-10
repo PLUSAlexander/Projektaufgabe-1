@@ -3,7 +3,7 @@ import java.util.*;
 //Projektaufgabe_1
 public class Main {
 
-    private static final Random RANDOM = new Random();
+    private static final Random RANDOM = new Random(42);
     private static String url = "jdbc:postgresql://localhost/postgres";
     private static String user = "postgres";
     private static String pwd = "1234";
@@ -17,16 +17,16 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(5, 0.2, 5);
+        generate(4, 0.5, 4);
 
-        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        v2h("h2v");
+        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        //v2h("h2v");
         showConnectionAndSQL();
     }
 
 
 
-
+    /*
     public static void v2h(String tableName) throws SQLException {
         //delete Horizontal table and v2helper if they already exist
         Statement stmDrop = con.createStatement();
@@ -189,7 +189,7 @@ public class Main {
         String sqlDropTemp = "DROP TABLE H2V_temp;";
         Statement stDropTemp = con.createStatement();
         stDropTemp.execute(sqlDropTemp);
-    }
+    } */
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {
         if (num_attributes <= 0 || num_tuples <= 0 || num_attributes > 1600 || sparsity > 1.0 || sparsity < 0.0) {
@@ -266,7 +266,7 @@ public class Main {
         insert.append(");");
         Statement insertInto = con.createStatement();
         insertInto.execute(insert.toString());
-
+        /*
         //insert special case with all attributes NULL
         StringBuilder insertSpecial = new StringBuilder("INSERT INTO H VALUES (");
 
@@ -283,7 +283,7 @@ public class Main {
 
         Statement insertSpecialInto = con.createStatement();
         insertSpecialInto.execute(insertSpecial.toString());
-
+        */
 
         System.out.println("Table created and filled.");
 

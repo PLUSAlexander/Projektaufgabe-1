@@ -17,16 +17,17 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(4, 0.5, 4);
+        //generate(4, 0.5, 4);
+        benchmark();
 
         //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         //v2h("h2v");
-        showConnectionAndSQL();
+        //showConnectionAndSQL();
     }
 
 
 
-    /*
+
     public static void v2h(String tableName) throws SQLException {
         //delete Horizontal table and v2helper if they already exist
         Statement stmDrop = con.createStatement();
@@ -189,7 +190,7 @@ public class Main {
         String sqlDropTemp = "DROP TABLE H2V_temp;";
         Statement stDropTemp = con.createStatement();
         stDropTemp.execute(sqlDropTemp);
-    } */
+    }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {
         if (num_attributes <= 0 || num_tuples <= 0 || num_attributes > 1600 || sparsity > 1.0 || sparsity < 0.0) {
@@ -240,9 +241,9 @@ public class Main {
                     } else {
                         String attributeValue;
                         if (attributs[j].equals("String")) {
-                            attributeValue = generateRandomString(1, 5);
+                            attributeValue = generateRandomString(1, 20);
                         } else {
-                            attributeValue = Integer.toString(RANDOM.nextInt(num_tuples));
+                            attributeValue = Integer.toString(RANDOM.nextInt(Integer.MAX_VALUE));
                         }
 
                         Map<String, Integer> columnCounts = attributeCounts.computeIfAbsent("a" + j, k -> new HashMap<>());
@@ -319,6 +320,26 @@ public class Main {
         stmnt.execute(insert);
 
         System.out.println("Table created and filled.");
+    }
+
+    public static void benchmark() throws SQLException {
+        double exponent = 1.01;
+        int minDatensatz = 1001;
+        int numAttributs = 5;
+        double sparsity = 1;
+
+        for (int i = numAttributs; i < 1600; i+= numAttributs) {
+            for (double k = exponent; k < 2.0; k += 0.09) {
+                for (int j = minDatensatz; j < 1000000; j *= exponent) {
+                    System.out.println(j);
+                        for (double x = sparsity; x <= 6; x += 0.1) {
+                            //generate(j, Math.pow(2, -x), i);
+                            //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
+                        }
+                }
+            }
+        }
+
     }
 
 

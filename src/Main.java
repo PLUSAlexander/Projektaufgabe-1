@@ -1,5 +1,7 @@
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+
 //Projektaufgabe_1
 public class Main {
 
@@ -20,8 +22,8 @@ public class Main {
         //generate(4, 0.5, 4);
         benchmark();
 
-        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        //v2h("h2v");
+        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        v2h("h2v");
         //showConnectionAndSQL();
     }
 
@@ -31,7 +33,7 @@ public class Main {
     public static void v2h(String tableName) throws SQLException {
         //delete Horizontal table and v2helper if they already exist
         Statement stmDrop = con.createStatement();
-        String sqlDrop = "DROP Table if exists " + tableName + "V2H;";
+        String sqlDrop = "DROP Table if exists " + tableName + "_V2H;";
         stmDrop.execute(sqlDrop);
         Statement stDrop = con.createStatement();
         String stringDrop = "DROP Table if exists v2helper;";
@@ -72,63 +74,63 @@ public class Main {
         int attCounter = 0;
 
         for (String attName : attributeNames) {
-            Statement stmGetAttOid = con.createStatement();       //get oids from all tuples that have the attribute
-            String getAttOid = "SELECT oid FROM " + tableName + " WHERE key = '" + attName + "';";
-            ResultSet resultOid = stmGetAttOid.executeQuery(getAttOid);
+            if (!attName.equals("alle")) {
+                Statement stmGetAttOid = con.createStatement();       //get oids from all tuples that have the attribute
+                String getAttOid = "SELECT oid FROM " + tableName + " WHERE key = '" + attName + "';";
+                ResultSet resultOid = stmGetAttOid.executeQuery(getAttOid);
 
-            Statement stmGetAttVal = con.createStatement();      //get values from all tuples that have the attribute
-            String getAttVal = "SELECT val FROM " + tableName + " WHERE key = '" + attName + "';";
-            ResultSet resultVal = stmGetAttVal.executeQuery(getAttVal);
+                Statement stmGetAttVal = con.createStatement();      //get values from all tuples that have the attribute
+                String getAttVal = "SELECT val FROM " + tableName + " WHERE key = '" + attName + "';";
+                ResultSet resultVal = stmGetAttVal.executeQuery(getAttVal);
 
-            Statement stmCreateHelper = con.createStatement();
-            String createHelper;
-            if(attCounter % 2 == 0){       //adjust type (String or Integer)
-                createHelper = "CREATE TEMPORARY TABLE " + attName + " (oid int, " + attName + " varchar(255));";
-            }
-            else {
-                createHelper = "CREATE TEMPORARY TABLE " + attName + " (oid int, " + attName + " int);";
-            }
-            stmCreateHelper.execute(createHelper);
-
-            while (resultOid.next() && resultVal.next()) {
-                Statement stmFillHelper = con.createStatement();
-                String oidString = resultOid.getString(1);
-                int oid = Integer.parseInt(oidString);
-                String valString = resultVal.getString(1);
-                if(attCounter % 2 == 0){
-                    String fillHelper = "insert into " + attName + "(oid, " + attName + ") values(" + oid + ", '" + valString + "');";
-                    stmFillHelper.executeUpdate(fillHelper);
+                Statement stmCreateHelper = con.createStatement();
+                String createHelper;
+                if (attCounter % 2 == 0) {       //adjust type (String or Integer)
+                    createHelper = "CREATE TEMPORARY TABLE " + attName + " (oid int, " + attName + " varchar(255));";
+                } else {
+                    createHelper = "CREATE TEMPORARY TABLE " + attName + " (oid int, " + attName + " int);";
                 }
-                else {
-                    int val = Integer.parseInt(valString);
-                    String fillHelper = "insert into " + attName + "(oid, " + attName + ") values(" + oid + ", " + val + ");";
-                    stmFillHelper.executeUpdate(fillHelper);
+                stmCreateHelper.execute(createHelper);
+
+                while (resultOid.next() && resultVal.next()) {
+                    Statement stmFillHelper = con.createStatement();
+                    String oidString = resultOid.getString(1);
+                    int oid = Integer.parseInt(oidString);
+                    String valString = resultVal.getString(1);
+                    if (attCounter % 2 == 0) {
+                        String fillHelper = "insert into " + attName + "(oid, " + attName + ") values(" + oid + ", '" + valString + "');";
+                        stmFillHelper.executeUpdate(fillHelper);
+                    } else {
+                        int val = Integer.parseInt(valString);
+                        String fillHelper = "insert into " + attName + "(oid, " + attName + ") values(" + oid + ", " + val + ");";
+                        stmFillHelper.executeUpdate(fillHelper);
+                    }
                 }
+                attCounter++;
+
+
+                //join attribute with the helper and update the helper
+                Statement stmCreateV3helper = con.createStatement();
+                String createV3helper = "CREATE TABLE v3helper AS (SELECT * FROM v2helper);";
+                stmCreateV3helper.executeUpdate(createV3helper);
+
+                Statement stmDeleteOldV2helper = con.createStatement();
+                String deleteOldV2helper = "DROP Table if exists v2helper;";
+                stmDeleteOldV2helper.executeUpdate(deleteOldV2helper);
+
+                Statement stmJoinAttOfTuple = con.createStatement();
+                String joinAttOfTuple = "CREATE TABLE v2helper AS (SELECT v3helper.*, " + attName + "." + attName + " FROM v3helper LEFT JOIN " + attName + " ON v3helper.oid = " + attName + ".oid);";
+                stmJoinAttOfTuple.executeUpdate(joinAttOfTuple);
+
+                Statement stmDeleteOldV3helper = con.createStatement();
+                String deleteOldV3helper = "DROP Table if exists v3helper;";
+                stmDeleteOldV3helper.executeUpdate(deleteOldV3helper);
             }
-            attCounter++;
-
-
-            //join attribute with the helper and update the helper
-            Statement stmCreateV3helper = con.createStatement();
-            String createV3helper = "CREATE TABLE v3helper AS (SELECT * FROM v2helper);";
-            stmCreateV3helper.executeUpdate(createV3helper);
-
-            Statement stmDeleteOldV2helper = con.createStatement();
-            String deleteOldV2helper = "DROP Table if exists v2helper;";
-            stmDeleteOldV2helper.executeUpdate(deleteOldV2helper);
-
-            Statement stmJoinAttOfTuple = con.createStatement();
-            String joinAttOfTuple = "CREATE TABLE v2helper AS (SELECT v3helper.*, " + attName + "." + attName + " FROM v3helper LEFT JOIN " + attName + " ON v3helper.oid = " + attName + ".oid);";
-            stmJoinAttOfTuple.executeUpdate(joinAttOfTuple);
-
-            Statement stmDeleteOldV3helper = con.createStatement();
-            String deleteOldV3helper = "DROP Table if exists v3helper;";
-            stmDeleteOldV3helper.executeUpdate(deleteOldV3helper);
         }
 
 
         //sort table
-        String sqlSortTable = "CREATE TABLE " + tableName + "V2H AS SELECT * FROM v2helper ORDER BY oid ASC;";
+        String sqlSortTable = "CREATE TABLE " + tableName + "_V2H AS SELECT * FROM v2helper ORDER BY oid ASC;";
         Statement stSortTable = con.createStatement();
         stSortTable.execute(sqlSortTable);
 
@@ -328,14 +330,30 @@ public class Main {
         int numAttributs = 10;
         double sparsity = 1;
 
-        for (int i = numAttributs; i <= 100; i+= numAttributs) {
-                for (int j = minDatensatz; j < 10000; j *= exponent) {
-                        for (double x = sparsity; x <= 6; x += 0.5) {
-                            generate(j, Math.pow(2, -x), i);
-                            System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
-                        }
+
+
+        int totalQueries = 0;
+
+        long start = System.currentTimeMillis();
+        long end = start + 60 * 1000;
+
+        for (int i = numAttributs; i <= 100; i += numAttributs) {
+            for (int j = minDatensatz; j < 10000; j *= exponent) {
+                for (double x = sparsity; x <= 6; x += 0.5) {
+                    while (System.currentTimeMillis() < end) {
+                        generate(j, Math.pow(2, -x), i);
+                        Statement st = con.createStatement();
+                        String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                        ResultSet rs = st.executeQuery(sql1);
+                        totalQueries++;
+                        //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
+                        //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
+                    }
                 }
+            }
         }
+
+        System.out.println("Anfragen pro Minute: " + totalQueries);
 
     }
 

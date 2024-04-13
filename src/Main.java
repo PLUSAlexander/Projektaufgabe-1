@@ -286,7 +286,7 @@ public class Main {
         insertSpecialInto.execute(insertSpecial.toString());
         */
 
-        System.out.println("Table created and filled.");
+        //System.out.println("Table created and filled.");
 
     }
 
@@ -323,20 +323,18 @@ public class Main {
     }
 
     public static void benchmark() throws SQLException {
-        double exponent = 1.1;
-        int minDatensatz = 5000;
-        int numAttributs = 5;
+        double exponent = 1.5;
+        int minDatensatz = 1000;
+        int numAttributs = 10;
         double sparsity = 1;
 
-        for (int i = numAttributs; i < 1600; i+= numAttributs) {
-            for (double k = exponent; k < 2.0; k += 0.09) {
-                for (int j = minDatensatz; j < 1000000; j *= exponent) {
-                        for (double x = sparsity; x <= 6; x += 0.2) {
-                            //generate(j, Math.pow(2, -x), i);
+        for (int i = numAttributs; i <= 100; i+= numAttributs) {
+                for (int j = minDatensatz; j < 10000; j *= exponent) {
+                        for (double x = sparsity; x <= 6; x += 0.5) {
+                            generate(j, Math.pow(2, -x), i);
                             System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
                         }
                 }
-            }
         }
 
     }

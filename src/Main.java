@@ -19,8 +19,8 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(4, 0.5, 4);
-        //benchmark();
+        //generate(4, 0.2, 4);
+        benchmark();
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         v2h("h2v");
@@ -369,9 +369,7 @@ public class Main {
         int numAttributs = 10;
         double sparsity = 1;
 
-
-
-        int totalQueries = 0;
+        //int totalQueries = 0;
 
         long start = System.currentTimeMillis();
         long end = start + 60 * 1000;
@@ -379,20 +377,22 @@ public class Main {
         for (int i = numAttributs; i <= 100; i += numAttributs) {
             for (int j = minDatensatz; j < 10000; j *= exponent) {
                 for (double x = sparsity; x <= 6; x += 0.5) {
-                    while (System.currentTimeMillis() < end) {
+                    //while (System.currentTimeMillis() < end) {
                         generate(j, Math.pow(2, -x), i);
                         Statement st = con.createStatement();
                         String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
                         ResultSet rs = st.executeQuery(sql1);
-                        totalQueries++;
+                        //totalQueries++;
                         //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
                         //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
-                    }
+                    //}
                 }
             }
         }
-
-        System.out.println("Anfragen pro Minute: " + totalQueries);
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - start;
+        System.out.println("gesamte Ausführungszeit in Min.: " + (double) executionTime/60000.0);
+        //System.out.println("Anfragen pro Minute: " + totalQueries);
 
     }
 

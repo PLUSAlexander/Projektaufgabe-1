@@ -23,7 +23,7 @@ public class Main {
         benchmark();
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        v2h("h2v");
+        v2h("h_h2v");
         //showConnectionAndSQL();
     }
 
@@ -365,35 +365,46 @@ public class Main {
 
     public static void benchmark() throws SQLException {
         double exponent = 1.5;
-        int minDatensatz = 1000;
-        int numAttributs = 10;
+        int minDatensatz = 1500; //1001
+        int numAttributs = 10; //5
         double sparsity = 1;
 
-        //int totalQueries = 0;
+        int totalQueries = 0;
+        int queriesThisMinute = 0;
 
         long start = System.currentTimeMillis();
-        long end = start + 60 * 1000;
+        long nextMinute = start + 60000;
+        int z = 1;
 
         for (int i = numAttributs; i <= 100; i += numAttributs) {
             for (int j = minDatensatz; j < 10000; j *= exponent) {
                 for (double x = sparsity; x <= 6; x += 0.5) {
-                    //while (System.currentTimeMillis() < end) {
-                        generate(j, Math.pow(2, -x), i);
-                        Statement st = con.createStatement();
-                        String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
-                        ResultSet rs = st.executeQuery(sql1);
-                        //totalQueries++;
-                        //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
-                        //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
-                    //}
+                    generate(j, Math.pow(2, -x), i);
+                    Statement st = con.createStatement();
+                    String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                    ResultSet rs = st.executeQuery(sql1);
+                    //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
+                    //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
+
+                    totalQueries++;
+                    queriesThisMinute++;
+
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime >= nextMinute) {
+                        System.out.println("Queries in Min. " + z + ": " + queriesThisMinute);
+                        nextMinute += 60000;
+                        queriesThisMinute = 0;
+                        z++;
+                    }
                 }
             }
         }
+
+
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - start;
-        System.out.println("gesamte Ausführungszeit in Min.: " + (double) executionTime/60000.0);
-        //System.out.println("Anfragen pro Minute: " + totalQueries);
-
+        System.out.println("gesamte Ausführungszeit in Min.: " + (double) executionTime/60000.0 + " ||| in total: " + totalQueries + " Queries");
+        System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0));
     }
 
 

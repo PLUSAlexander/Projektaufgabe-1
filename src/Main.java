@@ -19,8 +19,8 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        //generate(4, 0.5, 4);
-        benchmark();
+        generate(4, 0.5, 4);
+        //benchmark();
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         v2h("h2v");
@@ -144,18 +144,22 @@ public class Main {
 
 
     public static void h2v(String tableName) throws SQLException {
+        //delete h2v and h2v_temp if they already exist
         Statement stDrop = con.createStatement();
         String sqlDrop = "DROP Table if exists h2v_temp;";
         stDrop.execute(sqlDrop);
         Statement orginalDrop = con.createStatement();
-        String sqlOrginalDrop = "DROP Table if exists h2v;";
+        String sqlOrginalDrop = "DROP Table if exists " + tableName + "_H2V;";
         orginalDrop.execute(sqlOrginalDrop);
 
 
+        //create vertical table
         Statement stCreateVertical = con.createStatement();
-        String sqlCreateVertical = "CREATE TABLE H2V_temp (Oid int, Key varchar(5), Val varchar(255));";
+        String sqlCreateVertical = "CREATE TABLE H2V_temp (Oid int, Key varchar(20), Val varchar(255));";
         stCreateVertical.execute(sqlCreateVertical);
 
+
+        //get data from table
         DatabaseMetaData metaData = con.getMetaData();
         ResultSet resultSet = metaData.getColumns(null, null, tableName, null);
 
@@ -167,31 +171,66 @@ public class Main {
             attributeTypes.put(columnName, dataType);
         }
 
+
+        //fill table
+        List<Integer> insertedOids = new ArrayList<>();
+
         for (String s : attributeTypes.keySet()) {
             if (!s.equals("oid")) {
                 String sql = "SELECT oid," + s + " FROM " + tableName + " WHERE " + s + " is not null;";
-                //System.out.println(sql);
                 Statement st = con.createStatement();
                 ResultSet rs1 = st.executeQuery(sql);
                 while (rs1.next()) {
                     int oidValue = rs1.getInt("oid");
                     String value = rs1.getString(s);
-                    StringBuilder insert = new StringBuilder("INSERT INTO H2V_temp VALUES ( ");
-                    insert.append(oidValue + ", '" + s + "', '" + value + "');");
+                    String insert = "INSERT INTO H2V_temp VALUES ( " + oidValue + ", '" + s + "', '" + value + "');";
                     Statement stInsertVertical = con.createStatement();
-                    stInsertVertical.execute(insert.toString());
+                    stInsertVertical.execute(insert);
+                    if(!insertedOids.contains(oidValue)){
+                        insertedOids.add(oidValue);
+                    }
                 }
             }
         }
 
 
-        String sqlSortTable = "CREATE TABLE H2V AS SELECT * FROM H2V_temp ORDER BY Oid ASC, key;";
+        //check for special case
+        Statement countTuplesStm = con.createStatement();
+        String countTuples = "SELECT COUNT(*) as tupleCount FROM " + tableName;
+        ResultSet amountTuples = countTuplesStm.executeQuery(countTuples);
+
+        int numberTuples = 0;
+        while (amountTuples.next()){
+            numberTuples = amountTuples.getInt("tupleCount");}
+
+        List<Integer> allOids = new ArrayList<>();
+        for(int i = 1; i <= numberTuples; i++){
+            allOids.add(i);
+        }
+
+        for(int i = 1; i <= numberTuples; i++){
+            if(insertedOids.contains(i)){
+                allOids.remove(Integer.valueOf(i));
+            }
+        }
+
+        for (int nullOid : allOids) {
+            Statement insertAllNullStm = con.createStatement();
+            String insertAllNull = "INSERT INTO H2V_temp VALUES ( " + nullOid + ", 'alle');";
+            insertAllNullStm.execute(insertAllNull);
+        }
+
+
+        //sort table
+        String sqlSortTable = "CREATE TABLE " + tableName + "_H2V AS SELECT * FROM H2V_temp ORDER BY Oid ASC, key;";
         Statement stSortTable = con.createStatement();
         stSortTable.execute(sqlSortTable);
 
         String sqlDropTemp = "DROP TABLE H2V_temp;";
         Statement stDropTemp = con.createStatement();
         stDropTemp.execute(sqlDropTemp);
+
+        System.out.println("Successfully converted to vertical.");
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {

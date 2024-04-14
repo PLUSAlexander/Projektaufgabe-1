@@ -19,12 +19,13 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        //generate(4, 0.2, 4);
-        benchmark();
+        generate(4, 0.2, 4);
+        //benchmark();
 
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        v2h("h_h2v");
+        v2h_view("h_h2v");
         //showConnectionAndSQL();
+        con.close();
     }
 
 
@@ -141,7 +142,52 @@ public class Main {
         System.out.println("Successfully converted to horizontal.");
     }
 
+    // v2h as view ->
+    public static void v2h_view(String tableName) throws SQLException {
+        //delete view if it already exists
+        Statement stmDrop = con.createStatement();
+        String sqlDrop = "DROP VIEW if exists " + tableName + "_V2H;";
+        stmDrop.execute(sqlDrop);
 
+        //get attribute names
+        Statement stmGetAttNames = con.createStatement();
+        String getAttNames = "SELECT distinct Key FROM " + tableName;
+        ArrayList<String> attributeNames = new ArrayList<>();
+        ResultSet rs = stmGetAttNames.executeQuery(getAttNames);
+        while (rs.next()) {
+            attributeNames.add(rs.getString(1));
+        }
+        Collections.sort(attributeNames);
+
+        //create view
+        Statement createViewStm = con.createStatement();
+        StringBuilder createView = new StringBuilder("CREATE VIEW " + tableName + "_V2H AS SELECT oid.oid, ");
+
+        for(int i = 0; i <= attributeNames.size()-1; i++){
+            String value = attributeNames.get(i);
+            if(!value.equals("alle")) {
+                createView.append(value + ".val AS " + value);
+                if (i <= attributeNames.size() - 3) {
+                    createView.append(", "); }
+            }
+        }
+
+        createView.append(" FROM ((SELECT distinct oid FROM " + tableName + ") AS oid LEFT JOIN ");
+
+        for(int i = 0; i <= attributeNames.size()-1; i++){
+            String attName = attributeNames.get(i);
+            if(!attName.equals("alle")) {
+                createView.append(tableName + " AS " + attName + " ON oid.oid = " + attName + ".oid AND " + attName + ".key = '" + attName + "' ");
+                if(i <= attributeNames.size() - 3) {
+                    createView.append("LEFT JOIN ");
+                }
+            }
+        }
+        createView.append(") ORDER BY oid.oid");
+        createViewStm.execute(createView.toString());
+
+        System.out.println("Successfully converted to horizontal.");
+    }
 
     public static void h2v(String tableName) throws SQLException {
         //delete h2v and h2v_temp if they already exist
@@ -308,7 +354,8 @@ public class Main {
         insert.append(");");
         Statement insertInto = con.createStatement();
         insertInto.execute(insert.toString());
-        /*
+
+
         //insert special case with all attributes NULL
         StringBuilder insertSpecial = new StringBuilder("INSERT INTO H VALUES (");
 
@@ -325,7 +372,7 @@ public class Main {
 
         Statement insertSpecialInto = con.createStatement();
         insertSpecialInto.execute(insertSpecial.toString());
-        */
+
 
         //System.out.println("Table created and filled.");
 

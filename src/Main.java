@@ -411,8 +411,8 @@ public class Main {
 
     public static void benchmark() throws SQLException {
         double exponent = 1.5;
-        int minDatensatz = 1500; //1001
-        int numAttributs = 10; //5
+        int minDatensatz = 1001; //1001
+        int numAttributs = 5; //5
         double sparsity = 1;
 
         int totalQueries = 0;
@@ -421,18 +421,24 @@ public class Main {
         long start = System.currentTimeMillis();
         long nextMinute = start + 60000;
         int z = 1;
+        String tableSize = "SELECT pg_size_pretty(pg_total_relation_size('h_h2v'));";
 
         for (int i = numAttributs; i <= 100; i += numAttributs) {
             for (int j = minDatensatz; j < 5000; j *= exponent) {
-                for (double x = sparsity; x <= 6; x += 1.0) {
+                for (double x = sparsity; x <= 6; x += 0.6) {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
                     v2h_view("h_h2v");
                     Statement st = con.createStatement();
-                    String sql1 = "select * from h_h2v_v2h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
-                    ResultSet rs = st.executeQuery(sql1);
+                    String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                    //ResultSet rs = st.executeQuery(sql1);
+                    ResultSet rs1 = st.executeQuery(tableSize);
+                    while (rs1.next()) {
+                        System.out.println("Table size: " + rs1.getString(1));
+                    }
                     //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
-                    System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
+                    //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
+
 
                     totalQueries++;
                     queriesThisMinute++;
@@ -454,6 +460,9 @@ public class Main {
         System.out.println("gesamte Ausführungszeit in Min.: " + (double) executionTime/60000.0 + " ||| in total: " + totalQueries + " Queries");
         System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0));
     }
+
+
+
 
 
 

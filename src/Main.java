@@ -195,7 +195,7 @@ public class Main {
         String sqlDrop = "DROP Table if exists h2v_temp;";
         stDrop.execute(sqlDrop);
         Statement orginalDrop = con.createStatement();
-        String sqlOrginalDrop = "DROP Table if exists " + tableName + "_H2V;";
+        String sqlOrginalDrop = "DROP Table if exists " + tableName + "_H2V cascade;";
         orginalDrop.execute(sqlOrginalDrop);
 
 

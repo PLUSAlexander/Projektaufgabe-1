@@ -19,11 +19,10 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(4, 0.2, 4);
-        //benchmark();
-
-        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        v2h_view("h_h2v");
+        //generate(4, 0.2, 4);
+        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        //v2h_view("h_h2v");
+        benchmark();
         //showConnectionAndSQL();
         con.close();
     }
@@ -424,14 +423,16 @@ public class Main {
         int z = 1;
 
         for (int i = numAttributs; i <= 100; i += numAttributs) {
-            for (int j = minDatensatz; j < 10000; j *= exponent) {
-                for (double x = sparsity; x <= 6; x += 0.5) {
+            for (int j = minDatensatz; j < 5000; j *= exponent) {
+                for (double x = sparsity; x <= 6; x += 1.0) {
                     generate(j, Math.pow(2, -x), i);
+                    h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+                    v2h_view("h_h2v");
                     Statement st = con.createStatement();
-                    String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                    String sql1 = "select * from h_h2v_v2h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
                     ResultSet rs = st.executeQuery(sql1);
                     //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
-                    //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
+                    System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
 
                     totalQueries++;
                     queriesThisMinute++;

@@ -19,10 +19,10 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        //generate(4, 0.2, 4);
-        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        //v2h_view("h_h2v");
-        benchmark();
+        generate(20, 0.2, 20);
+        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        v2h_view("h_h2v");
+        //benchmark();
         //showConnectionAndSQL();
         con.close();
     }
@@ -160,7 +160,7 @@ public class Main {
 
         //create view
         Statement createViewStm = con.createStatement();
-        StringBuilder createView = new StringBuilder("CREATE VIEW " + tableName + "_V2H AS SELECT oid.oid, ");
+        StringBuilder createView = new StringBuilder("CREATE VIEW h_view AS SELECT oid.oid, ");
 
         for(int i = 0; i <= attributeNames.size()-1; i++){
             String value = attributeNames.get(i);
@@ -185,7 +185,7 @@ public class Main {
         createView.append(") ORDER BY oid.oid");
         createViewStm.execute(createView.toString());
 
-        System.out.println("Successfully converted to horizontal.");
+        //System.out.println("Successfully converted to horizontal.");
     }
 
     public static void h2v(String tableName) throws SQLException {
@@ -275,7 +275,7 @@ public class Main {
         Statement stDropTemp = con.createStatement();
         stDropTemp.execute(sqlDropTemp);
 
-        System.out.println("Successfully converted to vertical.");
+        //System.out.println("Successfully converted to vertical.");
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {
@@ -329,7 +329,7 @@ public class Main {
                         if (attributs[j].equals("String")) {
                             attributeValue = generateRandomString(1, 20);
                         } else {
-                            attributeValue = Integer.toString(RANDOM.nextInt(Integer.MAX_VALUE));
+                            attributeValue = Integer.toString(RANDOM.nextInt(num_tuples / 2));
                         }
 
                         Map<String, Integer> columnCounts = attributeCounts.computeIfAbsent("a" + j, k -> new HashMap<>());
@@ -410,7 +410,7 @@ public class Main {
     }
 
     public static void benchmark() throws SQLException {
-        double exponent = 1.5;
+        double exponent = 1.4;
         int minDatensatz = 1001; //1001
         int numAttributs = 5; //5
         double sparsity = 1;
@@ -423,21 +423,22 @@ public class Main {
         int z = 1;
         String tableSize = "SELECT pg_size_pretty(pg_total_relation_size('h_h2v'));";
 
-        for (int i = numAttributs; i <= 100; i += numAttributs) {
-            for (int j = minDatensatz; j < 5000; j *= exponent) {
-                for (double x = sparsity; x <= 6; x += 0.6) {
+        for (int i = numAttributs; i <= 30; i += numAttributs) {
+            for (int j = minDatensatz; j < 3000; j *= exponent) { //exponentiell!
+                for (double x = sparsity; x <= 6; x += 1.0) {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
                     v2h_view("h_h2v");
                     Statement st = con.createStatement();
-                    String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
-                    //ResultSet rs = st.executeQuery(sql1);
-                    ResultSet rs1 = st.executeQuery(tableSize);
-                    while (rs1.next()) {
-                        System.out.println("Table size: " + rs1.getString(1));
+                    String sql1 = "select * from h_view where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                    ResultSet rs = st.executeQuery(sql1);
+                    //ResultSet rs1 = st.executeQuery(tableSize);
+                    while (rs.next()) {
+                        System.out.println(rs.getString(1));
+                        System.out.println(sql1);
                     }
                     //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
-                    //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
+                    System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
 
 
                     totalQueries++;

@@ -21,10 +21,10 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(10, 0.2, 20);
-        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        v2h_view("h_h2v", true);
-        //benchmark();
+        //generate(10, 0.2, 20);
+        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        //v2h_view("h_h2v", true);
+        benchmark();
         //showConnectionAndSQL();
         con.close();
     }
@@ -431,7 +431,9 @@ public class Main {
         //long start = System.currentTimeMillis();
         //long nextMinute = start + 60000;
         int z = 1;
-        String tableSize = "SELECT pg_size_pretty(pg_total_relation_size('h_h2v'));";
+        String tableSizeV = "SELECT pg_size_pretty(pg_total_relation_size('h_h2v'));";
+        String tableSizeH = "SELECT pg_size_pretty(pg_total_relation_size('h'));";
+        Random rand = new Random();
 
         for (int i = numAttributs; i <= 15; i += 2) {
             for (int j = minDatensatz; j < 3000; j *= exponent) { //exponentiell!
@@ -440,21 +442,44 @@ public class Main {
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
                     v2h_view("h_h2v", true);
 
+                    Statement stVSize = con.createStatement();
+                    Statement stHSize = con.createStatement();
+                    ResultSet rs1 = stVSize.executeQuery(tableSizeV);
+                    ResultSet rs12 = stHSize.executeQuery(tableSizeH);
+                    while (rs1.next() && rs12.next()) {
+                        System.out.println("Speicherverbrauch V: " + rs1.getString(1)); //SPEICHERVERBRAUCH
+                        System.out.println("Speicherverbrauch H: " + rs12.getString(1)); //SPEICHERVERBRAUCH
+                    }
+
                     int k = 1;
                     long start = System.currentTimeMillis();
                     while (k <= 100) {
                         Statement st = con.createStatement();
-                        String sql1 = "select * from h_h2v_v2h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                        String sql1 = "select * from h_h2v_v2h where oid = " + rand.nextInt(j) + ";";  // genau ein Resultat
                         ResultSet rs = st.executeQuery(sql1);
-                        k++;
+
+                        int randomNumber = rand.nextInt(i - 2) + 2;
+                        if (randomNumber % 2 != 0) {
+                            randomNumber--;
+
+                        }
+                        Statement st2 = con.createStatement();
+                        String sql2 = "Select oid from H where a" + randomNumber + " = '" + rand.nextInt(j/2) + "';"; // ca. 5 Resultate
+                        ResultSet rs2 = st2.executeQuery(sql2);
+                        int counter = 0;
+                        while (rs2.next()) {
+                            counter++;
+                        }
+                        //System.out.println(counter); ZEIGEN, DASS 5x VORKOMMT
+
+                        k += 2;
                     }
                     long endTime = System.currentTimeMillis();
                     long executionTime = endTime - start;
                     System.out.println("For num_tuples: num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i + " ||| Throughtput: " + ((double) k / (double) executionTime) * 1000.0 + " queries/Sek.");
 
 
-                    //ResultSet rs1 = st.executeQuery(tableSize);
-                    //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
+
                     //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
 
 

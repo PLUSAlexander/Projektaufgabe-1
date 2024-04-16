@@ -1,6 +1,8 @@
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 //Projektaufgabe_1
 public class Main {
@@ -19,10 +21,10 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        //generate(16, 0.2, 7);
-        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        //v2h_view("h_h2v");
-        benchmark();
+        generate(10, 0.2, 20);
+        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        v2h_view("h_h2v");
+        //benchmark();
         //showConnectionAndSQL();
         con.close();
     }
@@ -156,7 +158,11 @@ public class Main {
         while (rs.next()) {
             attributeNames.add(rs.getString(1));
         }
-        Collections.sort(attributeNames);
+        Collections.sort(attributeNames, new NaturalOrderComparator());
+
+        for (String s : attributeNames) {
+            System.out.println(s);
+        }
 
         //create view
         Statement createViewStm = con.createStatement();
@@ -439,7 +445,7 @@ public class Main {
                     long start = System.currentTimeMillis();
                     while (k <= 100) {
                         Statement st = con.createStatement();
-                        String sql1 = "select * from h_h2v_v2h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                        String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
                         ResultSet rs = st.executeQuery(sql1);
                         k++;
                     }
@@ -478,6 +484,48 @@ public class Main {
 
 
 
+
+
+
+
+    static class NaturalOrderComparator implements Comparator<String> {
+        private final Pattern NUMBER_PATTERN = Pattern.compile("\\d+");
+
+        @Override
+        public int compare(String s1, String s2) {
+            // Check if either string is "alle", and if so, return accordingly
+            if (s1.equals("alle")) {
+                return 1; // "alle" should come after any other string
+            } else if (s2.equals("alle")) {
+                return -1; // "alle" should come after any other string
+            }
+
+            Matcher matcher1 = NUMBER_PATTERN.matcher(s1);
+            Matcher matcher2 = NUMBER_PATTERN.matcher(s2);
+
+            // Find the first number in each string
+            while (matcher1.find() && matcher2.find()) {
+                String match1 = matcher1.group();
+                String match2 = matcher2.group();
+
+                // Compare the numbers as integers
+                int result = Integer.compare(Integer.parseInt(match1), Integer.parseInt(match2));
+                if (result != 0) {
+                    return result;
+                }
+            }
+
+            // If one string has more numbers than the other, the one with more numbers comes later
+            if (matcher1.find()) {
+                return 1;
+            } else if (matcher2.find()) {
+                return -1;
+            }
+
+            // If no numbers found, perform lexicographical comparison
+            return s1.compareTo(s2);
+        }
+    }
 
 
 }

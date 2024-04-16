@@ -23,7 +23,7 @@ public class Main {
 
         generate(10, 0.2, 20);
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        v2h_view("h_h2v");
+        v2h_view("h_h2v", true);
         //benchmark();
         //showConnectionAndSQL();
         con.close();
@@ -144,7 +144,7 @@ public class Main {
     }
 
     // v2h as view ->
-    public static void v2h_view(String tableName) throws SQLException {
+    public static void v2h_view(String tableName, boolean index) throws SQLException {
         //delete view if it already exists
         Statement stmDrop = con.createStatement();
         String sqlDrop = "DROP VIEW if exists " + tableName + "_V2H;";
@@ -160,14 +160,12 @@ public class Main {
         }
         Collections.sort(attributeNames, new NaturalOrderComparator());
 
-        for (String s : attributeNames) {
-            System.out.println(s);
-        }
-
         //create view
         Statement createViewStm = con.createStatement();
-        //StringBuilder createView = new StringBuilder("CREATE VIEW " + tableName + "_V2H AS SELECT oid.oid, ");
-        StringBuilder createView = new StringBuilder("CREATE MATERIALIZED VIEW " + tableName + "_V2H AS SELECT oid.oid, "); // MATERIALISIERUNG!
+        StringBuilder createView = new StringBuilder("CREATE VIEW " + tableName + "_V2H AS SELECT oid.oid, ");
+        if (index) {
+            createView = new StringBuilder("CREATE MATERIALIZED VIEW " + tableName + "_V2H AS SELECT oid.oid, "); // MATERIALISIERUNG!
+        }
 
         for(int i = 0; i <= attributeNames.size()-1; i++){
             String value = attributeNames.get(i);
@@ -192,10 +190,11 @@ public class Main {
         createView.append(") ORDER BY oid.oid");
         createViewStm.execute(createView.toString());
 
-        Statement indexStm = con.createStatement();
-        String createIndex = "CREATE INDEX idx_oid_hash ON h_h2v_v2h USING hash (oid);";  // WITH INDEX!!!
-        indexStm.execute(createIndex);
-
+        if (index) {
+            Statement indexStm = con.createStatement();
+            String createIndex = "CREATE INDEX idx_oid_hash ON h_h2v_v2h USING hash (oid);";  // WITH INDEX!!!
+            indexStm.execute(createIndex);
+        }
         //System.out.println("Successfully converted to horizontal.");
     }
 
@@ -439,13 +438,13 @@ public class Main {
                 for (double x = sparsity; x <= 6; x += 1.0) {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-                    v2h_view("h_h2v");
+                    v2h_view("h_h2v", true);
 
                     int k = 1;
                     long start = System.currentTimeMillis();
                     while (k <= 100) {
                         Statement st = con.createStatement();
-                        String sql1 = "select * from h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                        String sql1 = "select * from h_h2v_v2h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
                         ResultSet rs = st.executeQuery(sql1);
                         k++;
                     }

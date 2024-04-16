@@ -19,10 +19,10 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(20, 0.2, 20);
-        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        v2h_view("h_h2v");
-        //benchmark();
+        //generate(16, 0.2, 7);
+        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        //v2h_view("h_h2v");
+        benchmark();
         //showConnectionAndSQL();
         con.close();
     }
@@ -160,7 +160,8 @@ public class Main {
 
         //create view
         Statement createViewStm = con.createStatement();
-        StringBuilder createView = new StringBuilder("CREATE VIEW h_view AS SELECT oid.oid, ");
+        //StringBuilder createView = new StringBuilder("CREATE VIEW " + tableName + "_V2H AS SELECT oid.oid, ");
+        StringBuilder createView = new StringBuilder("CREATE MATERIALIZED VIEW " + tableName + "_V2H AS SELECT oid.oid, "); // MATERIALISIERUNG!
 
         for(int i = 0; i <= attributeNames.size()-1; i++){
             String value = attributeNames.get(i);
@@ -184,6 +185,10 @@ public class Main {
         }
         createView.append(") ORDER BY oid.oid");
         createViewStm.execute(createView.toString());
+
+        Statement indexStm = con.createStatement();
+        String createIndex = "CREATE INDEX idx_oid_hash ON h_h2v_v2h USING hash (oid);";  // WITH INDEX!!!
+        indexStm.execute(createIndex);
 
         //System.out.println("Successfully converted to horizontal.");
     }
@@ -297,7 +302,7 @@ public class Main {
                 sb.append("Oid INT ");
             } else {
                 if (attributs[i].equals("String")) {
-                    sb.append("a" + i + " VARCHAR(20)");
+                    sb.append("a" + i + " VARCHAR(255)");
                 } else {
                     sb.append("a" + i + " INT");
                 }
@@ -418,48 +423,55 @@ public class Main {
         int totalQueries = 0;
         int queriesThisMinute = 0;
 
-        long start = System.currentTimeMillis();
-        long nextMinute = start + 60000;
+        //long start = System.currentTimeMillis();
+        //long nextMinute = start + 60000;
         int z = 1;
         String tableSize = "SELECT pg_size_pretty(pg_total_relation_size('h_h2v'));";
 
-        for (int i = numAttributs; i <= 30; i += numAttributs) {
+        for (int i = numAttributs; i <= 15; i += 2) {
             for (int j = minDatensatz; j < 3000; j *= exponent) { //exponentiell!
                 for (double x = sparsity; x <= 6; x += 1.0) {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
                     v2h_view("h_h2v");
-                    Statement st = con.createStatement();
-                    String sql1 = "select * from h_view where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
-                    ResultSet rs = st.executeQuery(sql1);
-                    //ResultSet rs1 = st.executeQuery(tableSize);
-                    while (rs.next()) {
-                        System.out.println(rs.getString(1));
-                        System.out.println(sql1);
+
+                    int k = 1;
+                    long start = System.currentTimeMillis();
+                    while (k <= 100) {
+                        Statement st = con.createStatement();
+                        String sql1 = "select * from h_h2v_v2h where oid = " + RANDOM.nextInt(j) + ";";  // genau ein Resultat
+                        ResultSet rs = st.executeQuery(sql1);
+                        k++;
                     }
+                    long endTime = System.currentTimeMillis();
+                    long executionTime = endTime - start;
+                    System.out.println("For num_tuples: num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i + " ||| Throughtput: " + ((double) k / (double) executionTime) * 1000.0 + " queries/Sek.");
+
+
+                    //ResultSet rs1 = st.executeQuery(tableSize);
                     //String sql2 = "Select oid from H where a" + RANDOM.nextInt(i) + " = TODO"; // ca. 5 Resultate
-                    System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
+                    //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
 
 
                     totalQueries++;
                     queriesThisMinute++;
-
+                    /*
                     long currentTime = System.currentTimeMillis();
                     if (currentTime >= nextMinute) {
                         System.out.println("Queries in Min. " + z + ": " + queriesThisMinute);
                         nextMinute += 60000;
                         queriesThisMinute = 0;
                         z++;
-                    }
+                    } */
                 }
             }
         }
 
-
+        /*
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - start;
         System.out.println("gesamte Ausführungszeit in Min.: " + (double) executionTime/60000.0 + " ||| in total: " + totalQueries + " Queries");
-        System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0));
+        System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0)); */
     }
 
 

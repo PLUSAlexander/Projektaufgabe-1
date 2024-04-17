@@ -21,7 +21,7 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        //generate(10, 0.2, 20);
+        //generate(29, 0.2, 7);
         //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         //v2h_view("h_h2v", true);
         benchmark();
@@ -285,6 +285,14 @@ public class Main {
         Statement stDropTemp = con.createStatement();
         stDropTemp.execute(sqlDropTemp);
 
+        Statement indexStm = con.createStatement();
+        String createIndex = "CREATE INDEX idx_oid_h_h2v ON h_h2v (oid);";  // WITH INDEX!!!
+        indexStm.execute(createIndex);
+
+        Statement clusterStm = con.createStatement();
+        String createCluster = "ALTER TABLE h_h2v CLUSTER ON idx_oid_h_h2v;";  // CLUSTER!!!, good for equality (left) join
+        clusterStm.execute(createCluster);
+
         //System.out.println("Successfully converted to vertical.");
     }
 
@@ -339,7 +347,7 @@ public class Main {
                         if (attributs[j].equals("String")) {
                             attributeValue = generateRandomString(1, 20);
                         } else {
-                            attributeValue = Integer.toString(RANDOM.nextInt(num_tuples / 2));
+                            attributeValue = Integer.toString(RANDOM.nextInt(num_tuples / 5));
                         }
 
                         Map<String, Integer> columnCounts = attributeCounts.computeIfAbsent("a" + j, k -> new HashMap<>());
@@ -464,13 +472,13 @@ public class Main {
 
                         }
                         Statement st2 = con.createStatement();
-                        String sql2 = "Select oid from H where a" + randomNumber + " = '" + rand.nextInt(j/2) + "';"; // ca. 5 Resultate
+                        String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
                         ResultSet rs2 = st2.executeQuery(sql2);
                         int counter = 0;
                         while (rs2.next()) {
                             counter++;
                         }
-                        //System.out.println(counter); ZEIGEN, DASS 5x VORKOMMT
+                        //System.out.println(counter); //ZEIGEN, DASS 5x VORKOMMT
 
                         k += 2;
                     }

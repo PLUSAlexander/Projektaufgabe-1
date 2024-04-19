@@ -13,7 +13,6 @@ public class Main {
     private static String pwd = "1234";
     private static Connection con;
 
-
     public static void main(String[] args) throws SQLException {
         con = DriverManager.getConnection(url, user, pwd);
         /*
@@ -21,13 +20,21 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        //generate(29, 0.2, 7);
-        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        //v2h_view("h_h2v", true);
+        generate(29, 0.2, 7);
+        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        v2h_view("h_h2v", false); /*
+        Statement st = con.createStatement();
+        String q_i = "select * from q_i(4);";
+        String q_ii = "select * from q_ii_temp(\'a4\', \'3\');";  // genau ein Resultat
+        ResultSet rs = st.executeQuery(q_i);
+        while (rs.next()) {
+            System.out.println(rs.getString(1));
+        } */
         benchmark();
         //showConnectionAndSQL();
         con.close();
     }
+
 
 
 
@@ -301,7 +308,7 @@ public class Main {
             throw new SQLException("generate() args wrong!!!");
         }
         Statement st = con.createStatement();
-        String sql = "DROP Table if exists H;";
+        String sql = "DROP Table if exists H CASCADE;";
         st.execute(sql);
 
         String[] attributs = new String[num_attributes];
@@ -428,7 +435,7 @@ public class Main {
     }
 
     public static void benchmark() throws SQLException {
-        double exponent = 1.4;
+        double exponent = 1.7;
         int minDatensatz = 1001; //1001
         int numAttributs = 5; //5
         double sparsity = 1;
@@ -444,7 +451,7 @@ public class Main {
         Random rand = new Random();
 
         for (int i = numAttributs; i <= 15; i += 2) {
-            for (int j = minDatensatz; j < 3000; j *= exponent) { //exponentiell!
+            for (int j = minDatensatz; j < 10000; j *= exponent) { //exponentiell!
                 for (double x = sparsity; x <= 6; x += 1.0) {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
@@ -463,8 +470,9 @@ public class Main {
                     long start = System.currentTimeMillis();
                     while (k <= 100) {
                         Statement st = con.createStatement();
-                        String sql1 = "select * from h_h2v_v2h where oid = " + rand.nextInt(j) + ";";  // genau ein Resultat
-                        ResultSet rs = st.executeQuery(sql1);
+                        String q_i = "select * from q_i(" + rand.nextInt(j) + ");";  // genau ein Resultat
+                        //String sql1 = "select * from h_h2v_v2h where oid = " + rand.nextInt(j) + ";";  // genau ein Resultat
+                        ResultSet rs = st.executeQuery(q_i);
 
                         int randomNumber = rand.nextInt(i - 2) + 2;
                         if (randomNumber % 2 != 0) {
@@ -472,8 +480,9 @@ public class Main {
 
                         }
                         Statement st2 = con.createStatement();
-                        String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
-                        ResultSet rs2 = st2.executeQuery(sql2);
+                        //String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
+                        String q_ii = "select * from q_ii_temp(\'a" + randomNumber + "\', \'" + rand.nextInt(j/5) + "\');";
+                        ResultSet rs2 = st2.executeQuery(q_ii);
                         int counter = 0;
                         while (rs2.next()) {
                             counter++;

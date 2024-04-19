@@ -3,10 +3,10 @@ import java.util.*;
 
 //Projektaufgabe 1
 
-public class Assignment1 {
-    private static String url = "jdbc:postgresql://localhost:5432/DJRProjektaufgabe1";
+public class Sofia_All {
+    private static String url = "jdbc:postgresql://localhost/postgres";
     private static String user = "postgres";
-    private static String pwd = "dreizehn13";
+    private static String pwd = "1234";
     private static Connection con;
     private static Random rand = new Random(738);
 
@@ -333,7 +333,7 @@ public class Assignment1 {
         while (rs.next()) {
             attributeNames.add(rs.getString(1));
         }
-        Collections.sort(attributeNames, new NaturalOrderComparator());
+        Collections.sort(attributeNames, new Main.NaturalOrderComparator());
 
         //create view
         Statement createViewStm = con.createStatement();

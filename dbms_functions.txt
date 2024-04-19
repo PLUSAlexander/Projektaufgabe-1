@@ -1,0 +1,55 @@
+Nr. 1: q_i():
+
+
+--CREATE OR REPLACE FUNCTION q_i(input_oid varchar(255))
+--returns SETOF h_h2v_v2h
+--AS
+--$$
+--BEGIN
+
+--RETURN QUERY
+--select * from h_h2v_v2h where h_h2v_v2h.oid = input_oid;
+--END;
+
+--$$
+--language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION q_i(input_oid INT)
+RETURNS TEXT
+AS $$
+DECLARE
+    result_text TEXT;
+BEGIN
+    EXECUTE 'SELECT row_to_json(row) FROM (SELECT * FROM h_h2v_v2h WHERE oid = $1) row' INTO result_text USING input_oid;
+
+    
+    RETURN result_text;
+END;
+$$
+LANGUAGE plpgsql;
+
+
+##########################################
+
+
+Nr. 2: q_ii_temp():
+
+
+
+CREATE OR REPLACE FUNCTION q_ii_temp(attribute_name varchar(255), input_val varchar(255))
+RETURNS TABLE (
+    output_oid int
+)
+AS
+$$
+DECLARE
+    sql_query text;
+BEGIN
+    sql_query := 'SELECT oid FROM h_h2v_v2h WHERE ' || attribute_name || ' = $1';
+
+    RETURN QUERY EXECUTE sql_query USING input_val;
+
+END;
+$$
+LANGUAGE plpgsql;

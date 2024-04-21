@@ -23,11 +23,13 @@ public class Main {
         generate(29, 0.2, 7);
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         v2h_view("h_h2v", true);
+
         Statement st = con.createStatement();
-        String q_i = "select * from q_i(4);";
+        String q_i = "select * from q_i();";
         String q_ii = "select * from q_ii_temp(\'a4\', 3);";  // genau ein Resultat
-        //ResultSet rs = st.executeQuery(q_ii);
-        benchmark();
+        //ResultSet rs = st.executeQuery(q_i);
+        q_ii("h_h2v_v2h");
+        //benchmark();
         //showConnectionAndSQL();
         con.close();
     }
@@ -454,6 +456,115 @@ public class Main {
         System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0)); */
     }
 
+
+
+    public static void q_i (String horizontalTable) throws SQLException {
+
+        // Select * from q_i(42)
+        // Select * from H_VIEW where oid = ???
+        Statement StdropFunc = con.createStatement();
+        String dropFunc = "drop function if exists q_i(inputOid int)";
+        StdropFunc.execute(dropFunc);
+
+        Statement createQ_iStm = con.createStatement();
+        StringBuilder createQ_i = new StringBuilder("CREATE OR REPLACE FUNCTION q_i(inputOid int) RETURNS TABLE(oid int, ");
+
+        DatabaseMetaData metaData = con.getMetaData();
+        ResultSet resultSet = metaData.getColumns(null, null, horizontalTable, null);
+
+        Map<String, String> attributeTypes = new HashMap<>();
+
+        while (resultSet.next()) {
+            String columnName = resultSet.getString("COLUMN_NAME");
+            String dataType = resultSet.getString("TYPE_NAME");
+            attributeTypes.put(columnName, dataType);
+        }
+
+        int attCounter = 0;
+
+        for(String s : attributeTypes.keySet()){
+            if (!s.equals("oid")) {
+                if (attributeTypes.get(s).equals("int4")) {
+                    createQ_i.append(s).append(" int");
+                } else {
+                    createQ_i.append(s).append(" varchar(255)");
+                }
+                attCounter++;
+                if (attCounter <= attributeTypes.size() - 2) {
+                    createQ_i.append(", ");
+                }
+            }
+        }
+
+        //BEGIN RETURN QUERY select * from h_h2v_v2h where h_h2v_v2h.oid = input_oid; END; $$ language plpgsql;
+
+        createQ_i.append(") AS $$ BEGIN RETURN QUERY EXECUTE 'SELECT * FROM h_h2v_v2h WHERE h_h2v_v2h.oid = $1' USING inputOid; END; $$ LANGUAGE plpgsql;");
+
+        System.out.println(createQ_i);
+        createQ_iStm.execute(createQ_i.toString());
+
+        Statement StmTryQ_i = con.createStatement();
+        String tryQ_i = "SELECT * from q_i(5)";
+        ResultSet rs = StmTryQ_i.executeQuery(tryQ_i);
+        while (rs.next()) {
+            System.out.println(rs.getString(1));
+            System.out.println(rs.getString(2));
+            System.out.println(rs.getString(3));
+            System.out.println(rs.getString(4));
+            System.out.println(rs.getString(5));
+            System.out.println(rs.getString(6));
+            System.out.println(rs.getString(7));
+        }
+    }
+
+    public static void q_ii(String horizontalTable) throws SQLException {
+        Statement StdropFunc = con.createStatement();
+        String dropFunc = "drop function if exists q_ii(inputOid int)";
+        StdropFunc.execute(dropFunc);
+
+        Statement createQ_iStm = con.createStatement();
+        StringBuilder createQ_i = new StringBuilder("CREATE OR REPLACE FUNCTION q_ii(attname varchar(255), input_val integer) RETURNS TABLE(oid int, ");
+
+        DatabaseMetaData metaData = con.getMetaData();
+        ResultSet resultSet = metaData.getColumns(null, null, horizontalTable, null);
+
+        Map<String, String> attributeTypes = new HashMap<>();
+
+        while (resultSet.next()) {
+            String columnName = resultSet.getString("COLUMN_NAME");
+            String dataType = resultSet.getString("TYPE_NAME");
+            attributeTypes.put(columnName, dataType);
+        }
+
+        int attCounter = 0;
+
+        for(String s : attributeTypes.keySet()){
+            if (!s.equals("oid")) {
+                if (attributeTypes.get(s).equals("int4")) {
+                    createQ_i.append(s).append(" int");
+                } else {
+                    createQ_i.append(s).append(" varchar(255)");
+                }
+                attCounter++;
+                if (attCounter <= attributeTypes.size() - 2) {
+                    createQ_i.append(", ");
+                }
+            }
+        }
+        //AS $$ DECLARE sql_query text; BEGIN sql_query := 'SELECT oid FROM h_h2v_v2h WHERE ' || attribute_name || ' = $1'; RETURN QUERY EXECUTE sql_query USING input_val; END; $$ LANGUAGE plpgsql;
+        createQ_i.append(") AS $$ DECLARE sql_query text; BEGIN sql_query := 'SELECT * FROM h_h2v_v2h WHERE ' || attname || ' = $1'; RETURN QUERY EXECUTE sql_query USING input_val; END; $$ LANGUAGE plpgsql;");
+        createQ_iStm.execute(createQ_i.toString());
+
+
+        Statement StmTryQ_ii = con.createStatement();
+        String tryQ_ii = "SELECT * from q_ii('a2', 4)";
+        ResultSet rs = StmTryQ_ii.executeQuery(tryQ_ii);
+
+        while (rs.next()) {
+            System.out.println(rs.getInt(1));
+        }
+
+    }
 
 
 

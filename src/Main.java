@@ -24,12 +24,8 @@ public class Main {
         h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
         v2h_view("h_h2v", true);
 
-        Statement st = con.createStatement();
-        String q_i = "select * from q_i();";
-        String q_ii = "select * from q_ii_temp(\'a4\', 3);";  // genau ein Resultat
-        //ResultSet rs = st.executeQuery(q_i);
-        q_ii("h_h2v_v2h");
-        //benchmark();
+
+        benchmark();
         //showConnectionAndSQL();
         con.close();
     }
@@ -391,6 +387,8 @@ public class Main {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
                     v2h_view("h_h2v", true);
+                    q_i("h_h2v_v2h");
+                    q_ii("h_h2v_v2h");
 
                     Statement stVSize = con.createStatement();
                     Statement stHSize = con.createStatement();
@@ -500,9 +498,9 @@ public class Main {
 
         createQ_i.append(") AS $$ BEGIN RETURN QUERY EXECUTE 'SELECT * FROM h_h2v_v2h WHERE h_h2v_v2h.oid = $1' USING inputOid; END; $$ LANGUAGE plpgsql;");
 
-        System.out.println(createQ_i);
+        //System.out.println(createQ_i);
         createQ_iStm.execute(createQ_i.toString());
-
+        /*
         Statement StmTryQ_i = con.createStatement();
         String tryQ_i = "SELECT * from q_i(5)";
         ResultSet rs = StmTryQ_i.executeQuery(tryQ_i);
@@ -514,12 +512,12 @@ public class Main {
             System.out.println(rs.getString(5));
             System.out.println(rs.getString(6));
             System.out.println(rs.getString(7));
-        }
+        } */
     }
 
     public static void q_ii(String horizontalTable) throws SQLException {
         Statement StdropFunc = con.createStatement();
-        String dropFunc = "drop function if exists q_ii(inputOid int)";
+        String dropFunc = "drop function if exists q_ii(attname varchar(255), input_val integer)";
         StdropFunc.execute(dropFunc);
 
         Statement createQ_iStm = con.createStatement();
@@ -555,14 +553,14 @@ public class Main {
         createQ_i.append(") AS $$ DECLARE sql_query text; BEGIN sql_query := 'SELECT * FROM h_h2v_v2h WHERE ' || attname || ' = $1'; RETURN QUERY EXECUTE sql_query USING input_val; END; $$ LANGUAGE plpgsql;");
         createQ_iStm.execute(createQ_i.toString());
 
-
+        /*
         Statement StmTryQ_ii = con.createStatement();
         String tryQ_ii = "SELECT * from q_ii('a2', 4)";
         ResultSet rs = StmTryQ_ii.executeQuery(tryQ_ii);
 
         while (rs.next()) {
             System.out.println(rs.getInt(1));
-        }
+        } */
 
     }
 

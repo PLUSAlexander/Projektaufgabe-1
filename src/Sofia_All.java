@@ -29,10 +29,12 @@ public class Sofia_All {
         }
 
         //showConnectionAndSQL();
-        //generate(30, 0.2, 15);
-        //h2v("h");
+        generate(30, 0.2, 7);
+        h2v("h");
         v2h("h_h2v", true);
         //benchmark();
+        //q_i("h_h2v_v2h");
+        //q_ii("h_h2v_v2h");
 
         con.close();
     }
@@ -62,7 +64,7 @@ public class Sofia_All {
         sb.append("Oid INT, ");
         for (int i = 1; i < num_attributes; i++) {
             if (attributes[i].equals("String")) {
-                sb.append("a").append(i).append(" VARCHAR(20)");
+                sb.append("a").append(i).append(" VARCHAR(255)");
             } else {
                 sb.append("a").append(i).append(" INT");
             }
@@ -144,7 +146,7 @@ public class Sofia_All {
     }
 
 
-    //Generate random values ->
+    //Approach with generating random String values ->
     public static String generateRandomString(int minLength, int maxLength) {
         int length = minLength + RANDOM.nextInt(Math.min(maxLength - minLength + 1, 21)); // Limit maximum length to 21 to ensure the resulting length is not bigger than 20
         StringBuilder sb = new StringBuilder(length);
@@ -160,8 +162,9 @@ public class Sofia_All {
     }
 
 
-    // Select values from given list ->
-    /*public static String getStringValue(String att, List<String> valueList) throws Exception {
+    //Approach with selecting values from given list ->
+
+    /* public static String getStringValue(String att, List<String> valueList) throws Exception {
         if (valueList.isEmpty())
             throw new Exception("All values already used 5 times in attribute " + att);
 
@@ -223,22 +226,28 @@ public class Sofia_All {
 
 
 
+
     //Phase 2
 
     public static void h2v(String tableName) throws SQLException {
-        //delete h2v and h2v_temp if they already exist
-        Statement stDrop = con.createStatement();
-        String sqlDrop = "DROP Table if exists h2v_temp;";
-        stDrop.execute(sqlDrop);
-        Statement orginalDrop = con.createStatement();
-        String sqlOrginalDrop = "DROP Table if exists " + tableName + "_H2V cascade;";
-        orginalDrop.execute(sqlOrginalDrop);
+        //create table for int attributes
+        Statement intDrop = con.createStatement();
+        String sqlintDrop = "DROP table if exists " + tableName + "_h2v_int cascade;";
+        intDrop.execute(sqlintDrop);
+
+        Statement stCreateIntVertical = con.createStatement();
+        String sqlCreateIntVertical = "CREATE TABLE " + tableName + "_h2v_int (Oid int, Key varchar(20), Val int);";
+        stCreateIntVertical.execute(sqlCreateIntVertical);
 
 
-        //create vertical table
-        Statement stCreateVertical = con.createStatement();
-        String sqlCreateVertical = "CREATE TABLE H2V_temp (Oid int, Key varchar(20), Val varchar(255));";
-        stCreateVertical.execute(sqlCreateVertical);
+        //create table for String attributes
+        Statement StringDrop = con.createStatement();
+        String sqlStringDrop = "DROP table if exists " + tableName + "_h2v_string cascade;";
+        StringDrop.execute(sqlStringDrop);
+
+        Statement stCreateStringVertical = con.createStatement();
+        String sqlCreateStringVertical = "CREATE TABLE " + tableName + "_h2v_string (Oid int, Key varchar(20), Val varchar(255));";
+        stCreateStringVertical.execute(sqlCreateStringVertical);
 
 
         //get data from table
@@ -254,7 +263,7 @@ public class Sofia_All {
         }
 
 
-        //fill table
+        //fill tables
         List<Integer> insertedOids = new ArrayList<>();
 
         for (String s : attributeTypes.keySet()) {
@@ -262,14 +271,28 @@ public class Sofia_All {
                 String sql = "SELECT oid," + s + " FROM " + tableName + " WHERE " + s + " is not null;";
                 Statement st = con.createStatement();
                 ResultSet rs1 = st.executeQuery(sql);
-                while (rs1.next()) {
-                    int oidValue = rs1.getInt("oid");
-                    String value = rs1.getString(s);
-                    String insert = "INSERT INTO H2V_temp VALUES ( " + oidValue + ", '" + s + "', '" + value + "');";
-                    Statement stInsertVertical = con.createStatement();
-                    stInsertVertical.execute(insert);
-                    if (!insertedOids.contains(oidValue)) {
-                        insertedOids.add(oidValue);
+                if (attributeTypes.get(s).equals("int4")) {
+                    while (rs1.next()) {
+                        int oidValue = rs1.getInt("oid");
+                        int value = rs1.getInt(s);
+                        String insert = "INSERT INTO " + tableName + "_h2v_int VALUES ( " + oidValue + ", '" + s + "', '" + value + "');";
+                        Statement stInsertVertical = con.createStatement();
+                        stInsertVertical.execute(insert);
+                        if (!insertedOids.contains(oidValue)) {
+                            insertedOids.add(oidValue);
+                        }
+                    }
+                }
+                else {
+                    while (rs1.next()) {
+                        int oidValue = rs1.getInt("oid");
+                        String value = rs1.getString(s);
+                        String insert = "INSERT INTO " + tableName + "_h2v_string VALUES ( " + oidValue + ", '" + s + "', '" + value + "');";
+                        Statement stInsertVertical = con.createStatement();
+                        stInsertVertical.execute(insert);
+                        if (!insertedOids.contains(oidValue)) {
+                            insertedOids.add(oidValue);
+                        }
                     }
                 }
             }
@@ -299,19 +322,21 @@ public class Sofia_All {
 
         for (int nullOid : allOids) {
             Statement insertAllNullStm = con.createStatement();
-            String insertAllNull = "INSERT INTO H2V_temp VALUES ( " + nullOid + ", 'alle');";
+            String insertAllNull = "INSERT INTO " + tableName + "_h2v_string VALUES ( " + nullOid + ", 'alle');";
             insertAllNullStm.execute(insertAllNull);
         }
 
 
-        //sort table
-        String sqlSortTable = "CREATE TABLE " + tableName + "_H2V AS SELECT * FROM H2V_temp ORDER BY Oid ASC, key;";
-        Statement stSortTable = con.createStatement();
-        stSortTable.execute(sqlSortTable);
+        //delete vertical view h2v if it already exists
+        Statement orginalDrop = con.createStatement();
+        String sqlOrginalDrop = "DROP view if exists " + tableName + "_h2v cascade;";
+        orginalDrop.execute(sqlOrginalDrop);
 
-        String sqlDropTemp = "DROP TABLE H2V_temp;";
-        Statement stDropTemp = con.createStatement();
-        stDropTemp.execute(sqlDropTemp);
+
+        //create vertical view h2v
+        Statement stCreateVertical = con.createStatement();
+        String sqlCreateVertical = "CREATE view " + tableName + "_h2v AS SELECT oid, key, CAST(val AS VARCHAR) FROM " + tableName + "_h2v_int UNION ALL SELECT oid, key, val FROM " + tableName + "_h2v_string order by oid, key asc;";
+        stCreateVertical.execute(sqlCreateVertical);
 
         System.out.println("Successfully converted to vertical.");
     }
@@ -322,10 +347,11 @@ public class Sofia_All {
     public static void v2h(String tableName, boolean index) throws SQLException {
         //delete view if it already exists
         Statement stmDrop = con.createStatement();
-        String sqlDrop = "DROP VIEW if exists " + tableName + "_V2H;";
+        String sqlDrop = "DROP VIEW if exists " + tableName + "_v2h;";
         stmDrop.execute(sqlDrop);
 
-        //get attribute names
+
+        //get all attribute names
         Statement stmGetAttNames = con.createStatement();
         String getAttNames = "SELECT distinct Key FROM " + tableName;
         ArrayList<String> attributeNames = new ArrayList<>();
@@ -334,6 +360,27 @@ public class Sofia_All {
             attributeNames.add(rs.getString(1));
         }
         Collections.sort(attributeNames, new Main.NaturalOrderComparator());
+
+
+        //get int attribute names
+        Statement stmGetIntAttNames = con.createStatement();
+        String getIntAttNames = "SELECT distinct Key FROM " + tableName + "_int";
+        ArrayList<String> intAttributeNames = new ArrayList<>();
+        ResultSet rsInt = stmGetIntAttNames.executeQuery(getIntAttNames);
+        while (rsInt.next()) {
+            intAttributeNames.add(rsInt.getString(1));
+        }
+
+
+        //get String attribute names
+        Statement stmGetStringAttNames = con.createStatement();
+        String getStringAttNames = "SELECT distinct Key FROM " + tableName + "_string";
+        ArrayList<String> stringAttributeNames = new ArrayList<>();
+        ResultSet rsString = stmGetStringAttNames.executeQuery(getStringAttNames);
+        while (rsString.next()) {
+            stringAttributeNames.add(rsString.getString(1));
+        }
+
 
         //create view
         Statement createViewStm = con.createStatement();
@@ -357,7 +404,12 @@ public class Sofia_All {
         for (int i = 0; i <= attributeNames.size() - 1; i++) {
             String attName = attributeNames.get(i);
             if (!attName.equals("alle")) {
-                createView.append("(SELECT * FROM " + tableName + " WHERE " + tableName + ".key = '" + attName + "') AS " + attName + " ON oid.oid = " + attName + ".oid ");
+                if(intAttributeNames.contains(attName)) {
+                    createView.append("(SELECT * FROM " + tableName + "_int WHERE " + tableName + "_int.key = '" + attName + "') AS " + attName + " ON oid.oid = " + attName + ".oid ");
+                }
+                else {
+                    createView.append("(SELECT * FROM " + tableName + "_string WHERE " + tableName + "_string.key = '" + attName + "') AS " + attName + " ON oid.oid = " + attName + ".oid ");
+                }
                 if (i <= attributeNames.size() - 3) {
                     createView.append("LEFT JOIN ");
                 }
@@ -377,8 +429,9 @@ public class Sofia_All {
 
 
 
-    /* v2h as table ->
-    public static void v2h(String tableName) throws SQLException {
+    // v2h as table ->
+
+    /*public static void v2h(String tableName) throws SQLException {
         //delete Horizontal table and v2helper if they already exist
         Statement stmDrop = con.createStatement();
         String sqlDrop = "DROP Table if exists " + tableName + "_V2H;";
@@ -491,7 +544,7 @@ public class Sofia_All {
 
 
     public static void benchmark() throws Exception {
-        double exponent = 1.4;
+        double exponent = 1.7;
         int minDatensatz = 1001;
         int numAttributs = 5;
         double sparsity = 1;
@@ -510,7 +563,7 @@ public class Sofia_All {
 
         //check execution time
         for (int i = numAttributs; i <= 15; i += 2) {
-            for (int j = minDatensatz; j < 3000; j *= exponent) {
+            for (int j = minDatensatz; j < 10000; j *= exponent) {
                 for (double x = sparsity; x <= 6; x += 1.0) {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h");
@@ -522,8 +575,8 @@ public class Sofia_All {
                     ResultSet rs1 = stVSize.executeQuery(tableSizeV);
                     ResultSet rs12 = stHSize.executeQuery(tableSizeH);
                     while (rs1.next() && rs12.next()) {
-                        System.out.println("Speicherverbrauch V: " + rs1.getString(1));
-                        System.out.println("Speicherverbrauch H: " + rs12.getString(1));
+                        System.out.println("Needed storage V: " + rs1.getString(1));
+                        System.out.println("Needed storage H: " + rs12.getString(1));
                     }
 
                     int k = 1;
@@ -545,7 +598,7 @@ public class Sofia_All {
                         while (rs2.next()) {
                             counter++;
                         }
-                        //System.out.println(counter); ZEIGEN, DASS 5x VORKOMMT
+                        //System.out.println(counter); show that it occurs 5 times
 
                         k += 2;
                     }
@@ -575,7 +628,88 @@ public class Sofia_All {
         /*
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - start;
-        System.out.println("gesamte Ausführungszeit in Min.: " + (double) executionTime/60000.0 + " ||| in total: " + totalQueries + " Queries");
-        System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0)); */
+        System.out.println("total execution time in Min.: " + (double) executionTime/60000.0 + " ||| in total: " + totalQueries + " Queries");
+        System.out.println("Queries per minute: " + (double) totalQueries/((double) executionTime/60000.0)); */
+    }
+
+
+
+
+    //Phase 3
+
+    public static void q_i (String horizontalTable) throws SQLException {
+
+        // Select * from q_i(42)
+        // Select * from H_VIEW where oid = ???
+
+        Statement createQ_iStm = con.createStatement();
+        StringBuilder createQ_i = new StringBuilder("CREATE OR REPLACE FUNCTION q_i(inputOid int) RETURNS TABLE(oid int, ");
+
+        DatabaseMetaData metaData = con.getMetaData();
+        ResultSet resultSet = metaData.getColumns(null, null, horizontalTable, null);
+
+        Map<String, String> attributeTypes = new HashMap<>();
+
+        while (resultSet.next()) {
+            String columnName = resultSet.getString("COLUMN_NAME");
+            String dataType = resultSet.getString("TYPE_NAME");
+            attributeTypes.put(columnName, dataType);
+        }
+
+        int attCounter = 0;
+
+        for(String s : attributeTypes.keySet()){
+            if (!s.equals("oid")) {
+                if (attributeTypes.get(s).equals("int4")) {
+                    createQ_i.append(s).append(" int");
+                } else {
+                    createQ_i.append(s).append(" varchar(255)");
+                }
+                attCounter++;
+                if (attCounter <= attributeTypes.size() - 2) {
+                    createQ_i.append(", ");
+                }
+            }
+        }
+
+        createQ_i.append(") AS $$ BEGIN RETURN QUERY EXECUTE 'SELECT * FROM ").append(horizontalTable).append(" WHERE ").append(horizontalTable).append(".oid = $1' USING inputOid; END; $$ LANGUAGE plpgsql;");
+
+        System.out.println(createQ_i);
+        createQ_iStm.execute(createQ_i.toString());
+
+        Statement StmTryQ_i = con.createStatement();
+        String tryQ_i = "SELECT * from q_i(5)";
+        ResultSet rs = StmTryQ_i.executeQuery(tryQ_i);
+        while (rs.next()) {
+            System.out.println(rs.getString(1));
+            System.out.println(rs.getString(2));
+            System.out.println(rs.getString(3));
+            System.out.println(rs.getString(4));
+            System.out.println(rs.getString(5));
+            System.out.println(rs.getString(6));
+            System.out.println(rs.getString(7));
+        }
+    }
+
+
+    public static void q_ii (String horizontalTable) throws SQLException {
+
+        // Select * from q_ii(‘ai’, 3)
+        // Select oid from H_VIEW where ai = ???
+
+        //TO DO: funktioniert nur für Strings nicht für ints
+
+        Statement createQ_iiStm = con.createStatement();
+        String createQ_ii = "CREATE OR REPLACE FUNCTION q_ii(attName varchar(255), input_val varchar(255)) RETURNS TABLE(output_oid int) AS $$ BEGIN RETURN QUERY EXECUTE 'SELECT oid FROM " + horizontalTable + " WHERE " + horizontalTable + ".' || attName || '=$1' USING input_val; END; $$ LANGUAGE plpgsql;";
+        System.out.println(createQ_ii);
+        createQ_iiStm.execute(createQ_ii);
+
+        Statement StmTryQ_ii = con.createStatement();
+        String tryQ_ii = "SELECT * from q_ii('a1', 'a')";
+        ResultSet rs = StmTryQ_ii.executeQuery(tryQ_ii);
+
+        while (rs.next()) {
+            System.out.println(rs.getInt(1));
+        }
     }
 }

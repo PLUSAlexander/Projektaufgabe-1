@@ -25,9 +25,9 @@ public class Main {
         v2h_view("h_h2v", true);
         Statement st = con.createStatement();
         String q_i = "select * from q_i(4);";
-        String q_ii = "select * from q_ii_temp(\'a4\', \'3\');";  // genau ein Resultat
-        //ResultSet rs = st.executeQuery(q_i);
-        //benchmark();
+        String q_ii = "select * from q_ii_temp(\'a4\', 3);";  // genau ein Resultat
+        //ResultSet rs = st.executeQuery(q_ii);
+        benchmark();
         //showConnectionAndSQL();
         con.close();
     }
@@ -115,89 +115,6 @@ public class Main {
             indexStm.execute(createIndex);
         }
         //System.out.println("Successfully converted to horizontal.");
-    }
-
-    public static void v2h_sofia(String tableName, boolean index) throws SQLException {
-        //delete view if it already exists
-        Statement stmDrop = con.createStatement();
-        String sqlDrop = "DROP VIEW if exists " + tableName + "_v2h;";
-        stmDrop.execute(sqlDrop);
-
-
-        //get all attribute names
-        Statement stmGetAttNames = con.createStatement();
-        String getAttNames = "SELECT distinct Key FROM " + tableName;
-        ArrayList<String> attributeNames = new ArrayList<>();
-        ResultSet rs = stmGetAttNames.executeQuery(getAttNames);
-        while (rs.next()) {
-            attributeNames.add(rs.getString(1));
-        }
-        Collections.sort(attributeNames, new Main.NaturalOrderComparator());
-
-
-        //get int attribute names
-        Statement stmGetIntAttNames = con.createStatement();
-        String getIntAttNames = "SELECT distinct Key FROM " + tableName + "_int";
-        ArrayList<String> intAttributeNames = new ArrayList<>();
-        ResultSet rsInt = stmGetIntAttNames.executeQuery(getIntAttNames);
-        while (rsInt.next()) {
-            intAttributeNames.add(rsInt.getString(1));
-        }
-
-
-        //get String attribute names
-        Statement stmGetStringAttNames = con.createStatement();
-        String getStringAttNames = "SELECT distinct Key FROM " + tableName + "_string";
-        ArrayList<String> stringAttributeNames = new ArrayList<>();
-        ResultSet rsString = stmGetStringAttNames.executeQuery(getStringAttNames);
-        while (rsString.next()) {
-            stringAttributeNames.add(rsString.getString(1));
-        }
-
-
-        //create view
-        Statement createViewStm = con.createStatement();
-        StringBuilder createView = new StringBuilder("CREATE VIEW " + tableName + "_V2H AS SELECT oid.oid, ");
-        if (index) {
-            createView = new StringBuilder("CREATE MATERIALIZED VIEW " + tableName + "_V2H AS SELECT oid.oid, ");  //materialized view for improvement
-        }
-
-        for (int i = 0; i <= attributeNames.size() - 1; i++) {
-            String value = attributeNames.get(i);
-            if (!value.equals("alle")) {
-                createView.append(value + ".val AS " + value);
-                if (i <= attributeNames.size() - 3) {
-                    createView.append(", ");
-                }
-            }
-        }
-
-        createView.append(" FROM ((SELECT distinct oid FROM " + tableName + ") AS oid LEFT JOIN ");
-
-        for (int i = 0; i <= attributeNames.size() - 1; i++) {
-            String attName = attributeNames.get(i);
-            if (!attName.equals("alle")) {
-                if(intAttributeNames.contains(attName)) {
-                    createView.append("(SELECT * FROM " + tableName + "_int WHERE " + tableName + "_int.key = '" + attName + "') AS " + attName + " ON oid.oid = " + attName + ".oid ");
-                }
-                else {
-                    createView.append("(SELECT * FROM " + tableName + "_string WHERE " + tableName + "_string.key = '" + attName + "') AS " + attName + " ON oid.oid = " + attName + ".oid ");
-                }
-                if (i <= attributeNames.size() - 3) {
-                    createView.append("LEFT JOIN ");
-                }
-            }
-        }
-        createView.append(") ORDER BY oid.oid");
-        createViewStm.execute(createView.toString());
-
-        if (index) {
-            Statement indexStm = con.createStatement();
-            String createIndex = "CREATE INDEX idx_oid_hash ON " + tableName + "_v2h USING hash (oid);";  // index for improvement
-            indexStm.execute(createIndex);
-        }
-
-        System.out.println("Successfully converted to horizontal.");
     }
 
     public static void h2v(String tableName) throws SQLException {
@@ -299,13 +216,13 @@ public class Main {
         //sort table
         //delete vertical view h2v if it already exists
         Statement orginalDrop = con.createStatement();
-        String sqlOrginalDrop = "DROP view if exists " + tableName + "_h2v cascade;";
+        String sqlOrginalDrop = "DROP table if exists " + tableName + "_h2v cascade;";
         orginalDrop.execute(sqlOrginalDrop);
 
 
         //create vertical view h2v
         Statement stCreateVertical = con.createStatement();
-        String sqlCreateVertical = "CREATE view " + tableName + "_h2v AS SELECT oid, key, CAST(val AS VARCHAR) FROM " + tableName + "_h2v_int UNION ALL SELECT oid, key, val FROM " + tableName + "_h2v_string order by oid, key asc;";
+        String sqlCreateVertical = "CREATE table " + tableName + "_h2v AS SELECT oid, key, CAST(val AS VARCHAR) FROM " + tableName + "_h2v_int UNION ALL SELECT oid, key, val FROM " + tableName + "_h2v_string order by oid, key asc;";
         stCreateVertical.execute(sqlCreateVertical);
         /*
         Statement indexStm = con.createStatement();
@@ -317,118 +234,6 @@ public class Main {
         clusterStm.execute(createCluster);
         */
         //System.out.println("Successfully converted to vertical.");
-    }
-
-    public static void h2v_sofia(String tableName) throws SQLException {
-        //create table for int attributes
-        Statement intDrop = con.createStatement();
-        String sqlintDrop = "DROP table if exists " + tableName + "_h2v_int cascade;";
-        intDrop.execute(sqlintDrop);
-
-        Statement stCreateIntVertical = con.createStatement();
-        String sqlCreateIntVertical = "CREATE TABLE " + tableName + "_h2v_int (Oid int, Key varchar(20), Val int);";
-        stCreateIntVertical.execute(sqlCreateIntVertical);
-
-
-        //create table for String attributes
-        Statement StringDrop = con.createStatement();
-        String sqlStringDrop = "DROP table if exists " + tableName + "_h2v_string cascade;";
-        StringDrop.execute(sqlStringDrop);
-
-        Statement stCreateStringVertical = con.createStatement();
-        String sqlCreateStringVertical = "CREATE TABLE " + tableName + "_h2v_string (Oid int, Key varchar(20), Val varchar(255));";
-        stCreateStringVertical.execute(sqlCreateStringVertical);
-
-
-        //get data from table
-        DatabaseMetaData metaData = con.getMetaData();
-        ResultSet resultSet = metaData.getColumns(null, null, tableName, null);
-
-        Map<String, String> attributeTypes = new HashMap<>();
-
-        while (resultSet.next()) {
-            String columnName = resultSet.getString("COLUMN_NAME");
-            String dataType = resultSet.getString("TYPE_NAME");
-            attributeTypes.put(columnName, dataType);
-        }
-
-
-        //fill tables
-        List<Integer> insertedOids = new ArrayList<>();
-
-        for (String s : attributeTypes.keySet()) {
-            if (!s.equals("oid")) {
-                String sql = "SELECT oid," + s + " FROM " + tableName + " WHERE " + s + " is not null;";
-                Statement st = con.createStatement();
-                ResultSet rs1 = st.executeQuery(sql);
-                if (attributeTypes.get(s).equals("int4")) {
-                    while (rs1.next()) {
-                        int oidValue = rs1.getInt("oid");
-                        int value = rs1.getInt(s);
-                        String insert = "INSERT INTO " + tableName + "_h2v_int VALUES ( " + oidValue + ", '" + s + "', '" + value + "');";
-                        Statement stInsertVertical = con.createStatement();
-                        stInsertVertical.execute(insert);
-                        if (!insertedOids.contains(oidValue)) {
-                            insertedOids.add(oidValue);
-                        }
-                    }
-                }
-                else {
-                    while (rs1.next()) {
-                        int oidValue = rs1.getInt("oid");
-                        String value = rs1.getString(s);
-                        String insert = "INSERT INTO " + tableName + "_h2v_string VALUES ( " + oidValue + ", '" + s + "', '" + value + "');";
-                        Statement stInsertVertical = con.createStatement();
-                        stInsertVertical.execute(insert);
-                        if (!insertedOids.contains(oidValue)) {
-                            insertedOids.add(oidValue);
-                        }
-                    }
-                }
-            }
-        }
-
-
-        //check for special case
-        Statement countTuplesStm = con.createStatement();
-        String countTuples = "SELECT COUNT(*) as tupleCount FROM " + tableName;
-        ResultSet amountTuples = countTuplesStm.executeQuery(countTuples);
-
-        int numberTuples = 0;
-        while (amountTuples.next()) {
-            numberTuples = amountTuples.getInt("tupleCount");
-        }
-
-        List<Integer> allOids = new ArrayList<>();
-        for (int i = 1; i <= numberTuples; i++) {
-            allOids.add(i);
-        }
-
-        for (int i = 1; i <= numberTuples; i++) {
-            if (insertedOids.contains(i)) {
-                allOids.remove(Integer.valueOf(i));
-            }
-        }
-
-        for (int nullOid : allOids) {
-            Statement insertAllNullStm = con.createStatement();
-            String insertAllNull = "INSERT INTO " + tableName + "_h2v_string VALUES ( " + nullOid + ", 'alle');";
-            insertAllNullStm.execute(insertAllNull);
-        }
-
-
-        //delete vertical view h2v if it already exists
-        Statement orginalDrop = con.createStatement();
-        String sqlOrginalDrop = "DROP view if exists " + tableName + "_h2v cascade;";
-        orginalDrop.execute(sqlOrginalDrop);
-
-
-        //create vertical view h2v
-        Statement stCreateVertical = con.createStatement();
-        String sqlCreateVertical = "CREATE view " + tableName + "_h2v AS SELECT oid, key, CAST(val AS VARCHAR) FROM " + tableName + "_h2v_int UNION ALL SELECT oid, key, val FROM " + tableName + "_h2v_string order by oid, key asc;";
-        stCreateVertical.execute(sqlCreateVertical);
-
-        System.out.println("Successfully converted to vertical.");
     }
 
     public static void generate(int num_tuples, double sparsity, int num_attributes) throws SQLException {
@@ -609,7 +414,7 @@ public class Main {
                         }
                         Statement st2 = con.createStatement();
                         //String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
-                        String q_ii = "select * from q_ii_temp(\'a" + randomNumber + "\', \'" + rand.nextInt(j/5) + "\');";
+                        String q_ii = "select * from q_ii_temp(\'a" + randomNumber + "\', " + rand.nextInt(j/5) + ");";
                         ResultSet rs2 = st2.executeQuery(q_ii);
                         int counter = 0;
                         while (rs2.next()) {

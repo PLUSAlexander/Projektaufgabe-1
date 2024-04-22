@@ -368,26 +368,28 @@ public class Main {
     public static void benchmark() throws SQLException {
         double exponent = 1.7;
         int minDatensatz = 1001; //1001
-        int numAttributs = 5; //5
+        int numAttributs = 3; //5
         double sparsity = 1;
 
         int totalQueries = 0;
         int queriesThisMinute = 0;
+        ArrayList<String> perMinuteQueries = new ArrayList<>();
 
-        //long start = System.currentTimeMillis();
-        //long nextMinute = start + 60000;
+        long start = System.currentTimeMillis();
+        long executionTime = 0;
+        long nextMinute = start + 60000;
         int z = 1;
         String tableSizeV = "SELECT pg_size_pretty(pg_total_relation_size('h_h2v'));";
         String tableSizeH = "SELECT pg_size_pretty(pg_total_relation_size('h'));";
         Random rand = new Random();
 
-        for (int i = numAttributs; i <= 15; i += 2) {
+        for (int i = numAttributs; i <= 15; i += 3) {
             for (int j = minDatensatz; j < 10000; j *= exponent) { //exponentiell!
                 for (double x = sparsity; x <= 6; x += 1.0) {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
                     v2h_view("h_h2v", true);
-                    q_i("h_h2v_v2h");
+                    /*q_i("h_h2v_v2h");
                     q_ii("h_h2v_v2h");
 
                     Statement stVSize = con.createStatement();
@@ -397,15 +399,15 @@ public class Main {
                     while (rs1.next() && rs12.next()) {
                         System.out.println("Speicherverbrauch V: " + rs1.getString(1)); //SPEICHERVERBRAUCH
                         System.out.println("Speicherverbrauch H: " + rs12.getString(1)); //SPEICHERVERBRAUCH
-                    }
+                    } */
 
                     int k = 1;
-                    long start = System.currentTimeMillis();
+                    long startInner = System.currentTimeMillis();
                     while (k <= 100) {
                         Statement st = con.createStatement();
-                        String q_i = "select * from q_i(" + rand.nextInt(j) + ");";  // genau ein Resultat
-                        //String sql1 = "select * from h_h2v_v2h where oid = " + rand.nextInt(j) + ";";  // genau ein Resultat
-                        ResultSet rs = st.executeQuery(q_i);
+                        //String q_i = "select * from q_i(" + rand.nextInt(j) + ");";  // genau ein Resultat
+                        String sql1 = "select * from h_h2v_v2h where oid = " + rand.nextInt(j) + ";";  // genau ein Resultat
+                        ResultSet rs = st.executeQuery(sql1);
 
                         int randomNumber = rand.nextInt(i - 2) + 2;
                         if (randomNumber % 2 != 0) {
@@ -413,45 +415,44 @@ public class Main {
 
                         }
                         Statement st2 = con.createStatement();
-                        //String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
-                        String q_ii = "select * from q_ii_temp(\'a" + randomNumber + "\', " + rand.nextInt(j/5) + ");";
-                        ResultSet rs2 = st2.executeQuery(q_ii);
+                        String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
+                        //String q_ii = "select * from q_ii_temp(\'a" + randomNumber + "\', " + rand.nextInt(j/5) + ");";
+                        ResultSet rs2 = st2.executeQuery(sql2);/*
                         int counter = 0;
                         while (rs2.next()) {
                             counter++;
                         }
                         //System.out.println(counter); //ZEIGEN, DASS 5x VORKOMMT
-
+                        */
                         k += 2;
+                        totalQueries += 2;
+                        queriesThisMinute += 2;
                     }
-                    long endTime = System.currentTimeMillis();
-                    long executionTime = endTime - start;
-                    System.out.println("For num_tuples: num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i + " ||| Throughtput: " + ((double) k / (double) executionTime) * 1000.0 + " queries/Sek.");
-
-
-
+                    long endTimeInner = System.currentTimeMillis();
+                    long executionTimeInner = endTimeInner - startInner;
+                    executionTime += executionTimeInner;
+                    System.out.println("For num_tuples: num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i + " ||| Throughtput: " + ((double) k / (double) executionTimeInner) * 1000.0 + " queries/Sek.");
                     //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
 
-
-                    totalQueries++;
-                    queriesThisMinute++;
-                    /*
                     long currentTime = System.currentTimeMillis();
                     if (currentTime >= nextMinute) {
-                        System.out.println("Queries in Min. " + z + ": " + queriesThisMinute);
+                        perMinuteQueries.add("Queries in Min. " + z + ": " + queriesThisMinute);
                         nextMinute += 60000;
                         queriesThisMinute = 0;
                         z++;
-                    } */
+                    }
                 }
             }
         }
+        System.out.println("\n\n\n");
 
-        /*
-        long endTime = System.currentTimeMillis();
-        long executionTime = endTime - start;
+        for (String s : perMinuteQueries) {
+            System.out.println(s);
+        }
+
+        //long endTime = System.currentTimeMillis();
         System.out.println("gesamte Ausführungszeit in Min.: " + (double) executionTime/60000.0 + " ||| in total: " + totalQueries + " Queries");
-        System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0)); */
+        System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0));
     }
 
 

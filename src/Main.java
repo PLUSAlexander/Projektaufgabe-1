@@ -20,10 +20,10 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        generate(29, 0.2, 7);
-        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        v2h_view("h_h2v", true);
-
+        //generate(29, 0.2, 7);
+        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        //v2h_view("h_h2v", true);
+        //q_ii("h_h2v_v2h", false);
 
         benchmark();
         //showConnectionAndSQL();
@@ -222,7 +222,7 @@ public class Main {
         Statement stCreateVertical = con.createStatement();
         String sqlCreateVertical = "CREATE table " + tableName + "_h2v AS SELECT oid, key, CAST(val AS VARCHAR) FROM " + tableName + "_h2v_int UNION ALL SELECT oid, key, val FROM " + tableName + "_h2v_string order by oid, key asc;";
         stCreateVertical.execute(sqlCreateVertical);
-        /*
+
         Statement indexStm = con.createStatement();
         String createIndex = "CREATE INDEX idx_oid_h_h2v ON h_h2v (oid);";  // WITH INDEX!!!
         indexStm.execute(createIndex);
@@ -230,7 +230,7 @@ public class Main {
         Statement clusterStm = con.createStatement();
         String createCluster = "ALTER TABLE h_h2v CLUSTER ON idx_oid_h_h2v;";  // CLUSTER!!!, good for equality (left) join
         clusterStm.execute(createCluster);
-        */
+
         //System.out.println("Successfully converted to vertical.");
     }
 
@@ -389,9 +389,9 @@ public class Main {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
                     v2h_view("h_h2v", true);
-                    /*q_i("h_h2v_v2h");
-                    q_ii("h_h2v_v2h");
-
+                    q_i("h_h2v_v2h");
+                    q_ii("h_h2v_v2h", true);
+                    /*
                     Statement stVSize = con.createStatement();
                     Statement stHSize = con.createStatement();
                     ResultSet rs1 = stVSize.executeQuery(tableSizeV);
@@ -405,9 +405,9 @@ public class Main {
                     long startInner = System.currentTimeMillis();
                     while (k <= 100) {
                         Statement st = con.createStatement();
-                        //String q_i = "select * from q_i(" + rand.nextInt(j) + ");";  // genau ein Resultat
-                        String sql1 = "select * from h_h2v_v2h where oid = " + rand.nextInt(j) + ";";  // genau ein Resultat
-                        ResultSet rs = st.executeQuery(sql1);
+                        String q_i = "select * from q_i(" + rand.nextInt(j) + ");";  // genau ein Resultat
+                        //String sql1 = "select * from h_h2v_v2h where oid = " + rand.nextInt(j) + ";";  // genau ein Resultat
+                        ResultSet rs = st.executeQuery(q_i);
 
                         int randomNumber = rand.nextInt(i - 2) + 2;
                         if (randomNumber % 2 != 0) {
@@ -415,9 +415,9 @@ public class Main {
 
                         }
                         Statement st2 = con.createStatement();
-                        String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
-                        //String q_ii = "select * from q_ii_temp(\'a" + randomNumber + "\', " + rand.nextInt(j/5) + ");";
-                        ResultSet rs2 = st2.executeQuery(sql2);/*
+                        //String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
+                        String q_ii = "select oid from q_ii(\'a" + randomNumber + "\', " + rand.nextInt(j/5) + ");";
+                        ResultSet rs2 = st2.executeQuery(q_ii);/*
                         int counter = 0;
                         while (rs2.next()) {
                             counter++;
@@ -430,7 +430,7 @@ public class Main {
                     }
                     long endTimeInner = System.currentTimeMillis();
                     long executionTimeInner = endTimeInner - startInner;
-                    executionTime += executionTimeInner;
+                    //executionTime += executionTimeInner;
                     System.out.println("For num_tuples: num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i + " ||| Throughtput: " + ((double) k / (double) executionTimeInner) * 1000.0 + " queries/Sek.");
                     //System.out.println("num_tuples: " + j + ", sparsity: " + Math.pow(2, -x) + ", num_attributes: " + i);
 
@@ -450,7 +450,8 @@ public class Main {
             System.out.println(s);
         }
 
-        //long endTime = System.currentTimeMillis();
+        long endTime = System.currentTimeMillis();
+        executionTime = endTime - start;
         System.out.println("gesamte Ausführungszeit in Min.: " + (double) executionTime/60000.0 + " ||| in total: " + totalQueries + " Queries");
         System.out.println("Anfragen pro Minute: " + (double) totalQueries/((double) executionTime/60000.0));
     }
@@ -516,14 +517,23 @@ public class Main {
         } */
     }
 
-    public static void q_ii(String horizontalTable) throws SQLException {
+    public static void q_ii(String horizontalTable, boolean intAtt) throws SQLException {
         Statement StdropFunc = con.createStatement();
         String dropFunc = "drop function if exists q_ii(attname varchar(255), input_val integer)";
         StdropFunc.execute(dropFunc);
 
-        Statement createQ_iStm = con.createStatement();
-        StringBuilder createQ_i = new StringBuilder("CREATE OR REPLACE FUNCTION q_ii(attname varchar(255), input_val integer) RETURNS TABLE(oid int, ");
+        Statement StdropStringFunc = con.createStatement();
+        String dropStringFunc = "drop function if exists q_ii(attname varchar(255), input_val varchar(255))";
+        StdropStringFunc.execute(dropStringFunc);
 
+        Statement createQ_iStm = con.createStatement();
+        StringBuilder createQ_i = new StringBuilder();
+        if (intAtt) {
+            createQ_i = new StringBuilder("CREATE OR REPLACE FUNCTION q_ii(attname varchar(255), input_val integer) RETURNS TABLE(oid int)");
+        } else {
+            createQ_i = new StringBuilder("CREATE OR REPLACE FUNCTION q_ii(attname varchar(255), input_val varchar(255)) RETURNS TABLE(oid int)");
+        }
+        /*
         DatabaseMetaData metaData = con.getMetaData();
         ResultSet resultSet = metaData.getColumns(null, null, horizontalTable, null);
 
@@ -549,9 +559,9 @@ public class Main {
                     createQ_i.append(", ");
                 }
             }
-        }
+        } */
         //AS $$ DECLARE sql_query text; BEGIN sql_query := 'SELECT oid FROM h_h2v_v2h WHERE ' || attribute_name || ' = $1'; RETURN QUERY EXECUTE sql_query USING input_val; END; $$ LANGUAGE plpgsql;
-        createQ_i.append(") AS $$ DECLARE sql_query text; BEGIN sql_query := 'SELECT * FROM h_h2v_v2h WHERE ' || attname || ' = $1'; RETURN QUERY EXECUTE sql_query USING input_val; END; $$ LANGUAGE plpgsql;");
+        createQ_i.append(" AS $$ DECLARE sql_query text; BEGIN sql_query := 'SELECT oid FROM h_h2v_v2h WHERE ' || attname || ' = $1'; RETURN QUERY EXECUTE sql_query USING input_val; END; $$ LANGUAGE plpgsql;");
         createQ_iStm.execute(createQ_i.toString());
 
         /*

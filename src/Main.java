@@ -20,10 +20,12 @@ public class Main {
             generate(i, i/100, i);   // probiere verschiedene werte um die korrektheit zu testen
         } */
 
-        //generate(29, 0.2, 7);
-        //h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-        //v2h_view("h_h2v", true);
-        //q_ii("h_h2v_v2h", false);
+        /*generate(1001, 0.5, 12);
+        h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
+        v2h_view("h_h2v", false);
+        q_i("h_h2v_v2h");
+        q_ii("h_h2v_v2h", false);*/
+
 
         benchmark();
         //showConnectionAndSQL();
@@ -388,7 +390,7 @@ public class Main {
                 for (double x = sparsity; x <= 6; x += 1.0) {
                     generate(j, Math.pow(2, -x), i);
                     h2v("h"); // ACHTUNG: muss klein geschrieben werden!!!
-                    v2h_view("h_h2v", true);
+                    v2h_view("h_h2v", true); //H2V VERBESSERUNG AUSSCHALTEN!!!
                     q_i("h_h2v_v2h");
                     q_ii("h_h2v_v2h", true);
                     /*
@@ -416,7 +418,7 @@ public class Main {
                         }
                         Statement st2 = con.createStatement();
                         //String sql2 = "Select oid from h_h2v_v2h where a" + randomNumber + " = '" + rand.nextInt(j/5) + "';"; // ca. 5 Resultate
-                        String q_ii = "select oid from q_ii(\'a" + randomNumber + "\', " + rand.nextInt(j/5) + ");";
+                        String q_ii = "select oid from q_ii(\'a" + randomNumber + "\', " + rand.nextInt(j / 5) + ");";
                         ResultSet rs2 = st2.executeQuery(q_ii);/*
                         int counter = 0;
                         while (rs2.next()) {
@@ -424,9 +426,9 @@ public class Main {
                         }
                         //System.out.println(counter); //ZEIGEN, DASS 5x VORKOMMT
                         */
-                        k += 2;
-                        totalQueries += 2;
-                        queriesThisMinute += 2;
+                            k += 2;
+                            totalQueries += 2;
+                            queriesThisMinute += 2;
                     }
                     long endTimeInner = System.currentTimeMillis();
                     long executionTimeInner = endTimeInner - startInner;
@@ -472,15 +474,28 @@ public class Main {
         DatabaseMetaData metaData = con.getMetaData();
         ResultSet resultSet = metaData.getColumns(null, null, horizontalTable, null);
 
-        Map<String, String> attributeTypes = new HashMap<>();
 
+        /*
+        int i = 1;
+        //Map<String, String> attributeTypes = new HashMap<>();
+        ArrayList<String> attributeNames = new ArrayList<>();
+        ArrayList<String> attType = new ArrayList<>();
         while (resultSet.next()) {
+            if (i % 2 == 0) {
+                attType.add("int4");
+            } else {
+                attType.add("varchar(255)");
+            }
             String columnName = resultSet.getString("COLUMN_NAME");
-            String dataType = resultSet.getString("TYPE_NAME");
-            attributeTypes.put(columnName, dataType);
+            attributeNames.add(columnName);
+            //String dataType = resultSet.getString("TYPE_NAME");
+            //attributeTypes.put(columnName, dataType);
+            i++;
         }
+        Collections.sort(attributeNames, new NaturalOrderComparator());
 
         int attCounter = 0;
+
 
         for(String s : attributeTypes.keySet()){
             if (!s.equals("oid")) {
@@ -495,12 +510,45 @@ public class Main {
                 }
             }
         }
+         */
+
+        int i = 1;
+        ArrayList<String> attributeNames = new ArrayList<>();
+        ArrayList<String> attType = new ArrayList<>();
+        while (resultSet.next()) {
+            String columnName = resultSet.getString("COLUMN_NAME");
+            attributeNames.add(columnName);
+            if (i % 2 == 0) {
+                attType.add("int4");
+            } else {
+                attType.add("varchar(255)");
+            }
+            i++;
+        }
+        Collections.sort(attributeNames, new NaturalOrderComparator());
+
+        int attCounter = 0;
+        for (String attributeName : attributeNames) {
+            String dataType = attType.get(attCounter); // Holen Sie den Datentyp für das aktuelle Attribut
+            if (!attributeName.equals("oid")) {
+                if (dataType.equals("int4")) {
+                    createQ_i.append(attributeName).append(" int");
+                } else {
+                    createQ_i.append(attributeName).append(" varchar(255)");
+                }
+                attCounter++;
+                if (attCounter < attributeNames.size() - 1) {
+                    createQ_i.append(", ");
+                }
+            }
+        }
+        //createQ_i.append(") AS $$ BEGIN RETURN QUERY EXECUTE 'SELECT * FROM h_h2v_v2h WHERE h_h2v_v2h.oid = $1' USING inputOid; END; $$ LANGUAGE plpgsql;");
+
 
         //BEGIN RETURN QUERY select * from h_h2v_v2h where h_h2v_v2h.oid = input_oid; END; $$ language plpgsql;
 
         createQ_i.append(") AS $$ BEGIN RETURN QUERY EXECUTE 'SELECT * FROM h_h2v_v2h WHERE h_h2v_v2h.oid = $1' USING inputOid; END; $$ LANGUAGE plpgsql;");
 
-        //System.out.println(createQ_i);
         createQ_iStm.execute(createQ_i.toString());
         /*
         Statement StmTryQ_i = con.createStatement();

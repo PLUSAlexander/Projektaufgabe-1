@@ -216,13 +216,13 @@ public class Main {
         //sort table
         //delete vertical view h2v if it already exists
         Statement orginalDrop = con.createStatement();
-        String sqlOrginalDrop = "DROP table if exists " + tableName + "_h2v cascade;";
+        String sqlOrginalDrop = "DROP view if exists " + tableName + "_h2v cascade;";
         orginalDrop.execute(sqlOrginalDrop);
 
 
         //create vertical view h2v
         Statement stCreateVertical = con.createStatement();
-        String sqlCreateVertical = "CREATE table " + tableName + "_h2v AS SELECT oid, key, CAST(val AS VARCHAR) FROM " + tableName + "_h2v_int UNION ALL SELECT oid, key, val FROM " + tableName + "_h2v_string order by oid, key asc;";
+        String sqlCreateVertical = "CREATE materialized view " + tableName + "_h2v AS SELECT oid, key, CAST(val AS VARCHAR) FROM " + tableName + "_h2v_int UNION ALL SELECT oid, key, val FROM " + tableName + "_h2v_string order by oid, key asc;";
         stCreateVertical.execute(sqlCreateVertical);
 
         Statement indexStm = con.createStatement();
